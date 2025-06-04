@@ -1,75 +1,127 @@
 body {
-    font-family: Arial, sans-serif;
-    background: #fafafa;
-    margin: 0;
-    padding-bottom: 60px; /* Platz für das feste Formular am unteren Rand */
+  font-family: 'Roboto', Arial, sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  min-height: 100vh;
+  margin: 0;
+  padding-bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gradient-text {
+  font-size: 2.5em;
+  font-weight: 700;
+  margin: 32px 0 12px 0;
+  background: linear-gradient(90deg, #ffb347 0%, #ff5e62 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  text-align: center;
+  letter-spacing: 2px;
+}
+
+#messages {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  background: rgba(255,255,255,0.10);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(30,60,114,0.08);
+  width: 100%;
+  max-width: 420px;
+  min-height: 260px;
+  max-height: 48vh;
+  overflow-y: auto;
+}
+
+#messages li {
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.25);
+  color: #222;
+  font-size: 1.09em;
+  word-break: break-word;
+  box-shadow: 0 1px 4px rgba(30,60,114,0.03);
+}
+
+#form {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100vw;
+  background: rgba(255,255,255,0.97);
+  padding: 16px 10px;
+  box-shadow: 0 -2px 16px rgba(30,60,114,0.08);
+  display: flex;
+  gap: 10px;
+  z-index: 10;
+  justify-content: center;
+}
+
+#input {
+  flex: 1 1 auto;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #b3c6e0;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.6);
+  color: #1e3c72;
+  outline: none;
+  transition: border 0.2s;
+  max-width: 350px;
+}
+
+#input:focus {
+  border: 1.5px solid #2a5298;
+  background: #fff;
+}
+
+button {
+  padding: 12px 20px;
+  font-size: 1em;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30,60,114,0.10);
+  transition: background 0.2s, transform 0.1s;
+}
+
+button:hover {
+  background: linear-gradient(90deg, #2a5298 0%, #1e3c72 100%);
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* Responsive Anpassung */
+@media (max-width: 600px) {
+  .gradient-text {
+    font-size: 1.4em;
   }
-  
   #messages {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    max-width: 98vw;
+    min-height: 160px;
+    font-size: 0.98em;
   }
-  
-  #messages li {
-    padding: 5px 10px;
-    word-break: break-word; /* Lange Wörter umbrechen */
-  }
-  
   #form {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: #fff;
-    padding: 10px;
-    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
-    display: flex;
-    gap: 10px;
+    padding: 8px 2vw;
+    gap: 6px;
   }
-  
   #input {
-    flex: 1 1 auto;
-    padding: 10px;
-    font-size: 1em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 8px;
+    font-size: 0.98em;
+    max-width: 100vw;
   }
-  
   button {
-    padding: 10px 16px;
-    font-size: 1em;
-    border: none;
-    border-radius: 4px;
-    background: #007bff;
-    color: #fff;
-    cursor: pointer;
+    padding: 8px 10px;
+    font-size: 0.98em;
   }
-  
-  button:hover {
-    background: #0056b3;
+  #messages li {
+    padding: 6px 8px;
+    font-size: 0.98em;
   }
-  
-  /* --- Responsive Anpassung für kleine Bildschirme --- */
-  @media (max-width: 600px) {
-    #form {
-      padding: 6px;
-      gap: 6px;
-    }
-  
-    #input {
-      padding: 8px;
-      font-size: 0.95em;
-    }
-  
-    button {
-      padding: 8px 10px;
-      font-size: 0.95em;
-    }
-  
-    #messages li {
-      padding: 4px 6px;
-      font-size: 0.98em;
-    }
-  }
-  
+}
