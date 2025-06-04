@@ -1,16 +1,14 @@
-// Nutzer nach Anfangsbuchstaben fragen
 let username = prompt("Bitte gib deinen Vornamen ein:");
-if (!username || username.length !== 10) {
-  username = "X"; // Falls nichts oder mehr als 10 Buchstaben eingegeben wird
+if (!username || username.length < 1) {
+  username = "X";
 }
-username = username.toUpperCase();
+username = username.charAt(0).toUpperCase() + username.slice(1).toLowerCase();
 
 const socket = io();
 const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 
-// Nachricht absenden, Buchstaben automatisch voranstellen
 form.addEventListener('submit', function(event) {
   event.preventDefault();
   if (input.value) {
@@ -20,7 +18,6 @@ form.addEventListener('submit', function(event) {
   }
 });
 
-// Nachrichten empfangen und anzeigen
 socket.on('chat message', function(msg) {
   const item = document.createElement('li');
   item.textContent = msg;
