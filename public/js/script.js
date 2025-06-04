@@ -1,7 +1,7 @@
 // Nutzer nach Anfangsbuchstaben fragen
-let username = prompt("Bitte gib den ersten Buchstaben deines Vornamens ein:");
-if (!username || username.length !== 1) {
-  username = "X"; // Falls nichts oder mehr als 1 Buchstabe eingegeben wird
+let username = prompt("Bitte gib deinen Vornamen ein:");
+if (!username || username.length !== 10) {
+  username = "X"; // Falls nichts oder mehr als 10 Buchstaben eingegeben wird
 }
 username = username.toUpperCase();
 
