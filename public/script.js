@@ -1,4 +1,3 @@
-// 1. Namen abfragen
 let username = prompt("Bitte gib den ersten Buchstaben deines Vornamens ein:");
 if (!username || username.length !== 1) {
   username = "X";
@@ -10,7 +9,6 @@ const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 
-// 2. Nachricht mit Buchstaben verschicken
 form.addEventListener('submit', function(event) {
   event.preventDefault();
   if (input.value) {
