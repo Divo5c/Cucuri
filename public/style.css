@@ -1,0 +1,75 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #fafafa;
+    margin: 0;
+    padding-bottom: 60px; /* Platz für das feste Formular am unteren Rand */
+  }
+  
+  #messages {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  #messages li {
+    padding: 5px 10px;
+    word-break: break-word; /* Lange Wörter umbrechen */
+  }
+  
+  #form {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #fff;
+    padding: 10px;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 10px;
+  }
+  
+  #input {
+    flex: 1 1 auto;
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  button {
+    padding: 10px 16px;
+    font-size: 1em;
+    border: none;
+    border-radius: 4px;
+    background: #007bff;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background: #0056b3;
+  }
+  
+  /* --- Responsive Anpassung für kleine Bildschirme --- */
+  @media (max-width: 600px) {
+    #form {
+      padding: 6px;
+      gap: 6px;
+    }
+  
+    #input {
+      padding: 8px;
+      font-size: 0.95em;
+    }
+  
+    button {
+      padding: 8px 10px;
+      font-size: 0.95em;
+    }
+  
+    #messages li {
+      padding: 4px 6px;
+      font-size: 0.98em;
+    }
+  }
+  
