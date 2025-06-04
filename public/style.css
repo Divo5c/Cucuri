@@ -1,31 +1,22 @@
 body {
-  font-family: 'Roboto', Arial, sans-serif;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-  min-height: 100vh;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   margin: 0;
-  padding-bottom: 80px;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #232946;
+  /* Cooles geometrisches Muster */
+  background-image:
+    repeating-linear-gradient(135deg, #393e6e 0 10px, transparent 10px 20px),
+    repeating-linear-gradient(225deg, #393e6e 0 10px, transparent 10px 20px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-}
-
-.gradient-text {
-  font-size: 2.5em;
-  font-weight: 700;
-  margin: 32px 0 12px 0;
-  background: linear-gradient(90deg, #ffb347 0%, #ff5e62 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
-  text-align: center;
-  letter-spacing: 2px;
+  align-items: flex-start; /* Alles linksbündig */
 }
 
 #messages {
   list-style: none;
-  padding: 0;
-  margin: 0 0 12px 0;
+  padding: 24px 0 0 24px; /* etwas Abstand zum Rand oben und links */
+  margin: 0;
   background: rgba(255,255,255,0.10);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(30,60,114,0.08);
@@ -34,6 +25,7 @@ body {
   min-height: 260px;
   max-height: 48vh;
   overflow-y: auto;
+  text-align: left;
 }
 
 #messages li {
@@ -41,10 +33,12 @@ body {
   margin-bottom: 8px;
   border-radius: 8px;
   background: rgba(255,255,255,0.25);
-  color: #222;
+  color: #232946;
   font-size: 1.09em;
   word-break: break-word;
   box-shadow: 0 1px 4px rgba(30,60,114,0.03);
+  text-align: left;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 #form {
@@ -58,7 +52,7 @@ body {
   display: flex;
   gap: 10px;
   z-index: 10;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 #input {
@@ -68,10 +62,11 @@ body {
   border: 1px solid #b3c6e0;
   border-radius: 6px;
   background: rgba(255,255,255,0.6);
-  color: #1e3c72;
+  color: #232946;
   outline: none;
   transition: border 0.2s;
   max-width: 350px;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 #input:focus {
@@ -90,6 +85,7 @@ button {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(30,60,114,0.10);
   transition: background 0.2s, transform 0.1s;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 button:hover {
@@ -99,13 +95,11 @@ button:hover {
 
 /* Responsive Anpassung */
 @media (max-width: 600px) {
-  .gradient-text {
-    font-size: 1.4em;
-  }
   #messages {
     max-width: 98vw;
     min-height: 160px;
     font-size: 0.98em;
+    padding-left: 4vw;
   }
   #form {
     padding: 8px 2vw;
