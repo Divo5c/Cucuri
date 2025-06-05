@@ -12,7 +12,8 @@ const messages = document.getElementById('messages');
 form.addEventListener('submit', function(event) {
   event.preventDefault();
   if (input.value) {
-    const message = `${username}/ ${input.value}`;
+    // Hier mit Doppelpunkt statt Slash
+    const message = `${username}: ${input.value}`;
     socket.emit('chat message', message);
     input.value = '';
   }
@@ -20,7 +21,8 @@ form.addEventListener('submit', function(event) {
 
 socket.on('chat message', function(msg) {
   const item = document.createElement('li');
-  item.textContent = msg;
+  // Optional: falls noch ein Slash vorkommt, ersetzen
+  item.textContent = msg.replace('/ ', ': ');
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 });
