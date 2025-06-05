@@ -4,11 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cucuri Chat</title>
-  <!-- Google Font Roboto -->
+  <!-- Google Font Nunito -->
   <link href="https://fonts.googleapis.com/css?family=Nunito:400,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    #chat-emoji {
+      font-size: 40px;
+      margin: 20px 0 8px 20px;
+      background: #fff;
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(30,60,114,0.10);
+      user-select: none;
+    }
+  </style>
 </head>
 <body>
+  <div id="chat-emoji" title="Cucuri Chat">💬</div>
   <ul id="messages"></ul>
   <form id="form" action="">
     <input id="input" autocomplete="off" placeholder="Nachricht eingeben..." />
