@@ -1,9 +1,8 @@
 body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Nunito', Arial, sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  /* Bild als Hintergrund, darunter fallback Muster */
   background:
     linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)),
     url('bg.jpg') center center/cover no-repeat fixed,
@@ -18,7 +17,7 @@ body {
   list-style: none;
   padding: 24px 0 0 24px;
   margin: 0;
-  background: rgba(255,255,255,0.92); /* fast weiß, sehr sichtbar */
+  background: rgba(255,255,255,0.92);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(30,60,114,0.08);
   width: 100%;
@@ -33,15 +32,15 @@ body {
   padding: 10px 16px;
   margin-bottom: 8px;
   border-radius: 8px;
-  background: #fff; /* weiß, nicht transparent */
+  background: #fff;
   color: #232946;
   font-size: 1.12em;
   word-break: break-word;
   box-shadow: 0 1px 4px rgba(30,60,114,0.05);
   text-align: left;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Nunito', Arial, sans-serif;
   font-weight: 700;
-  text-shadow: 0 2px 8px #e0e0e0, 0 0 2px #fff; /* heller Schein für Sichtbarkeit */
+  text-shadow: 0 2px 8px #e0e0e0, 0 0 2px #fff;
 }
 
 #form {
@@ -69,7 +68,7 @@ body {
   outline: none;
   transition: border 0.2s;
   max-width: 350px;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Nunito', Arial, sans-serif;
   font-weight: 600;
 }
 
@@ -89,7 +88,7 @@ button {
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(30,60,114,0.10);
   transition: background 0.2s, transform 0.1s;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Nunito', Arial, sans-serif;
   text-shadow: 0 2px 8px #232946, 0 0 2px #232946;
 }
 
@@ -98,7 +97,6 @@ button:hover {
   transform: translateY(-2px) scale(1.04);
 }
 
-/* Responsive Anpassung */
 @media (max-width: 600px) {
   #messages {
     max-width: 98vw;
