@@ -9,17 +9,30 @@ const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 
-// Nachrichten beim Laden aus localStorage anzeigen
+// Hilfsfunktion: Prüft, ob Nachrichten älter als 10 Minuten sind
+function messagesExpired() {
+  const lastClear = localStorage.getItem('lastClear');
+  if (!lastClear) return false;
+  const now = Date.now();
+  return now - parseInt(lastClear, 10) > 10 * 60 * 1000; // 10 Minuten
+}
+
+// Nachrichten beim Laden aus localStorage anzeigen oder löschen
 window.addEventListener('DOMContentLoaded', () => {
+  if (messagesExpired()) {
+    localStorage.removeItem('messages');
+    localStorage.setItem('lastClear', Date.now().toString());
+  }
   let stored = JSON.parse(localStorage.getItem('messages') || '[]');
   stored.forEach(msg => {
     addMessageToList(msg);
   });
 });
 
-// Nachrichten alle 10 Minuten löschen
+// Nachrichten alle 10 Minuten löschen (auch bei langer Sitzung)
 setInterval(() => {
   localStorage.removeItem('messages');
+  localStorage.setItem('lastClear', Date.now().toString());
   messages.innerHTML = '';
 }, 10 * 60 * 1000); // 10 Minuten
 
@@ -40,10 +53,11 @@ form.addEventListener('submit', function(event) {
 socket.on('chat message', function(msg) {
   addMessageToList(msg);
 
-  // Nachricht im localStorage speichern
+  // Nachricht im localStorage speichern und Zeitstempel aktualisieren
   let stored = JSON.parse(localStorage.getItem('messages') || '[]');
   stored.push(msg);
   localStorage.setItem('messages', JSON.stringify(stored));
+  localStorage.setItem('lastClear', Date.now().toString());
 });
 
 function addMessageToList(msg) {
@@ -52,4 +66,3 @@ function addMessageToList(msg) {
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
 }
-
