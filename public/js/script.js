@@ -9,21 +9,47 @@ const form = document.getElementById('form');
 const input = document.getElementById('input');
 const messages = document.getElementById('messages');
 
+// Nachrichten beim Laden aus localStorage anzeigen
+window.addEventListener('DOMContentLoaded', () => {
+  let stored = JSON.parse(localStorage.getItem('messages') || '[]');
+  stored.forEach(msg => {
+    addMessageToList(msg);
+  });
+});
+
+// Nachrichten alle 10 Minuten löschen
+setInterval(() => {
+  localStorage.removeItem('messages');
+  messages.innerHTML = '';
+}, 10 * 60 * 1000); // 10 Minuten
+
 form.addEventListener('submit', function(event) {
   event.preventDefault();
   if (input.value) {
-    // Hier mit Doppelpunkt statt Slash
-    const message = `${username}: ${input.value}`;
-    socket.emit('chat message', message);
+    const now = new Date();
+    const time = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const messageObj = {
+      text: `${username}: ${input.value}`,
+      time: time
+    };
+    socket.emit('chat message', messageObj);
     input.value = '';
   }
 });
 
 socket.on('chat message', function(msg) {
+  addMessageToList(msg);
+
+  // Nachricht im localStorage speichern
+  let stored = JSON.parse(localStorage.getItem('messages') || '[]');
+  stored.push(msg);
+  localStorage.setItem('messages', JSON.stringify(stored));
+});
+
+function addMessageToList(msg) {
   const item = document.createElement('li');
-  // Optional: falls noch ein Slash vorkommt, ersetzen
-  item.textContent = msg.replace('/ ', ': ');
+  item.innerHTML = `<span class="message-text">${msg.text}</span> <span class="message-time">${msg.time}</span>`;
   messages.appendChild(item);
   window.scrollTo(0, document.body.scrollHeight);
-});
+}
 

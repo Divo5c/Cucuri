@@ -122,3 +122,16 @@ button:hover {
     font-size: 0.98em;
   }
 }
+
+/* Diese beiden Blöcke stehen außerhalb des Media Queries! */
+.message-text {
+  font-family: 'Nunito', Arial, sans-serif;
+}
+
+.message-time {
+  font-family: 'Nunito', Arial, sans-serif;
+  color: #bbbbbb;
+  font-size: 0.85em;
+  margin-left: 8px;
+  font-weight: 400;
+}
