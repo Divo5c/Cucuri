@@ -147,15 +147,15 @@ button:hover {
   z-index: 99;
 }
 
-.stern-knopf {
+.oval-knopf {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 140px;
-  height: 44px;
+  height: 48px;
   background: linear-gradient(135deg, #f7d358 60%, #ffd700 100%);
   border: none;
-  border-radius: 22px / 14px; /* oval, oben/unten flach */
+  border-radius: 24px / 16px; /* Oval, oben/unten flach */
   box-shadow: 0 2px 8px rgba(30,60,114,0.12);
   color: #232946;
   font-family: 'Nunito', Arial, sans-serif;
@@ -167,7 +167,6 @@ button:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Das Muster bleibt erhalten: */
   transform: rotate(calc(var(--angle))) translate(140px) rotate(calc(-1 * var(--angle)));
   transition: box-shadow 0.2s, background 0.2s, transform 0.2s, color 0.2s;
   pointer-events: auto;
@@ -179,11 +178,10 @@ button:hover {
   outline: none;
 }
 
-.stern-knopf:focus,
-.stern-knopf:hover {
+.oval-knopf:focus,
+.oval-knopf:hover {
   background: linear-gradient(135deg, #ffd700 60%, #f7d358 100%);
   box-shadow: 0 4px 16px rgba(30,60,114,0.18);
   color: #1e3c72;
   text-decoration: none;
 }
-
