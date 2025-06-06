@@ -135,3 +135,43 @@ button:hover {
   margin-left: 8px;
   font-weight: 400;
 }
+
+.stern-knopf-container {
+  position: fixed;
+  top: 50%;
+  right: 18%;
+  width: 160px;
+  height: 160px;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 99;
+}
+
+.stern-knopf {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #f7d358 60%, #ffd700 100%);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(30,60,114,0.12);
+  color: #232946;
+  font-size: 2em;
+  font-family: inherit;
+  text-align: center;
+  line-height: 48px;
+  text-decoration: none;
+  font-weight: bold;
+  cursor: pointer;
+  transform: rotate(calc(var(--angle))) translate(70px) rotate(calc(-1 * var(--angle)));
+  transition: box-shadow 0.2s, background 0.2s, transform 0.2s;
+  pointer-events: auto;
+}
+.stern-knopf:hover {
+  background: linear-gradient(135deg, #ffd700 60%, #f7d358 100%);
+  box-shadow: 0 4px 16px rgba(30,60,114,0.18);
+  color: #1e3c72;
+}
+
