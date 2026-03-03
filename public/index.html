@@ -2,44 +2,33 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cucuri Chat</title>
-  <!-- Favicon einbinden -->
-  <link rel="icon" type="image/png" href="favicon.png">
-  <!-- Google Font Nunito -->
-  <link href="https://fonts.googleapis.com/css?family=Nunito:400,700&display=swap" rel="stylesheet">
+  <title>Lobby Chat</title>
   <link rel="stylesheet" href="style.css">
-  <style>
-    #chat-emoji {
-      font-size: 40px;
-      margin: 20px 0 8px 20px;
-      background: #fff;
-      width: 56px;
-      height: 56px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(30,60,114,0.10);
-      user-select: none;
-    }
-  </style>
 </head>
 <body>
-  <div id="chat-emoji" title="Cucuri Chat">💬</div>
-  <ul id="messages"></ul>
-  <form id="form" action="">
+  <!-- Login Modal (am Anfang sichtbar) -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal-content">
+      <span class="close-btn" id="closeModal">&times;</span>
+      <h2 id="modalTitle">Login</h2>
+      <form id="authForm">
+        <input type="text" id="username" placeholder="Benutzername" required>
+        <input type="password" id="password" placeholder="Passwort" required>
+        <button type="submit" id="submitBtn">Einloggen</button>
+      </form>
+      <p id="toggleLink">Kein Account? <span id="toggleText">Registrieren</span></p>
+      <div id="errorMsg" class="error"></div>
+    </div>
+  </div>
+
+  <!-- Chat (unsichtbar bis Login) -->
+  <ul id="messages" style="display: none;"></ul>
+  <form id="form" action="" style="display: none;">
     <input id="input" autocomplete="off" placeholder="Nachricht eingeben..." />
     <button>Senden</button>
   </form>
+
   <script src="/socket.io/socket.io.js"></script>
-  <script src="js/script.js"></script>
-  <div class="stern-knopf-container">
-    <a href="https://skribbl.io/" class="oval-knopf" style="--angle: 0deg;">Skribbl</a>
-    <a href="https://garticphone.com/de" class="oval-knopf" style="--angle: 72deg;">Gartic Phone</a>
-    <a href="https://agar.io/" class="oval-knopf" style="--angle: 144deg;">Agar.io</a>
-    <a href="http://slither.com/io" class="oval-knopf" style="--angle: 216deg;">Slither.io</a>
-    <a href="https://games.voodoo.io/paperio2" class="oval-knopf" style="--angle: 288deg;">Paper.io 2</a>
-  </div>
+  <script src="script.js"></script>
 </body>
 </html>
