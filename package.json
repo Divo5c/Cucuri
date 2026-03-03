@@ -1,7 +1,6 @@
 {
-  "name": "chat-lobby-app",
+  "name": "cucuri-chat-lobby",
   "version": "1.0.0",
-  "description": "Minecraft-inspirierte Chat-Lobby",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

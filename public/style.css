@@ -1,128 +1,195 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
 body {
-  font-family: Arial, sans-serif;
-  background: #fafafa;
-  margin: 0;
-  padding-bottom: 60px;
+  font-family: 'Orbitron', monospace;
+  height: 100vh;
+  background: linear-gradient(135deg, #FFD700, #FFA500, #FF8C00);
+  overflow: hidden;
+}
+
+#chatContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
 }
 
 #messages {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-#messages li {
-  padding: 5px 10px;
-  word-break: break-word;
-}
-
-#form {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: #fff;
-  padding: 10px;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
-  display: flex;
-  gap: 10px;
-}
-
-#input {
-  flex: 1 1 auto;
-  padding: 10px;
-  font-size: 1em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-button {
-  padding: 10px 16px;
-  font-size: 1em;
-  border: none;
-  border-radius: 4px;
-  background: #007bff;
-  color: #fff;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0056b3;
-}
-
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px); /* Schöner Blur [web:48] */
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  max-width: 380px;
-  width: 90%;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background-image: url('images/cucuri-format-3.jpg');
+  background-size: cover;
+  background-position: center;
   position: relative;
+}
+
+#messages::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+  z-index: 1;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 15px 20px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border-left: 5px solid #00FF88;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  animation: slideIn 0.3s ease-out;
+  position: relative;
+  z-index: 2;
+  max-width: 70%;
+}
+
+.message strong {
+  color: #FFD700;
+  font-weight: 900;
+  text-shadow: 1px 1px 2px black;
+}
+
+.message time {
+  color: #888;
+  font-size: 0.8em;
+  margin-left: 10px;
+}
+
+.sidebar {
+  width: 250px;
+  background: rgba(74,74,74,0.9);
+  padding: 20px;
+  border-left: 3px solid #FFD700;
+  overflow-y: auto;
+}
+
+.sidebar h3 {
+  color: #00FF88;
+  margin-bottom: 15px;
   text-align: center;
 }
 
-.close-btn {
-  position: absolute;
-  top: 15px; right: 20px;
-  font-size: 28px;
-  cursor: pointer;
-  color: #999;
-  font-weight: bold;
+#onlineList {
+  list-style: none;
 }
 
-.close-btn:hover { color: #333; }
+#onlineList li {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: rgba(0,255,136,0.2);
+  border-radius: 20px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 1px 1px black;
+}
 
-.modal-content h2 {
-  margin: 0 0 20px;
+.input-area {
+  display: flex;
+  padding: 20px;
+  background: rgba(0,0,0,0.4);
+  border-top: 4px solid #FFD700;
+  gap: 10px;
+}
+
+#messageInput {
+  flex: 1;
+  padding: 18px;
+  border: 3px solid #FFD700;
+  border-radius: 25px;
+  background: rgba(255,255,255,0.9);
+  font-size: 16px;
+  font-family: inherit;
+}
+
+#sendBtn {
+  padding: 18px 25px;
+  background: linear-gradient(#00FF88, #00CC6A);
+  color: black;
+  border: none;
+  border-radius: 25px;
+  font-weight: 900;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+#sendBtn:hover { transform: scale(1.05); }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: rgba(255,255,255,0.95);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+  animation: modalPop 0.4s ease-out;
+}
+
+@keyframes modalPop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+.tab { display: none; }
+.tab.active { display: block; }
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
   color: #333;
 }
 
+.modal-content input, .modal-content button {
+  padding: 12px 15px;
+  margin: 10px 0;
+  border: 2px solid #FFD700;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 700;
+}
+
 .modal-content input {
-  width: 100%; padding: 14px; margin: 12px 0;
-  border: 1px solid #ddd; border-radius: 8px;
-  box-sizing: border-box;
-  font-size: 16px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .modal-content button {
-  width: 100%; padding: 14px; margin: 12px 0 0;
-  font-size: 16px;
+  background: linear-gradient(#00FF88, #00CC6A);
+  color: black;
+  cursor: pointer;
 }
 
-#toggleLink { 
-  text-align: center; 
-  cursor: pointer; 
-  color: #007bff; 
-  margin-top: 20px;
-  font-size: 14px;
-}
+.hidden { display: none !important; }
 
-#toggleLink span:hover { text-decoration: underline; }
-
-.error {
-  color: #e74c3c; 
-  margin-top: 15px; 
-  font-weight: bold;
-  display: none;
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  #form { padding: 6px; gap: 6px; }
-  #input { padding: 8px; font-size: 0.95em; }
-  button { padding: 8px 10px; font-size: 0.95em; }
-  .modal-content { padding: 30px 25px; }
+@media (max-width: 768px) {
+  .chat-main { flex-direction: column; }
+  .sidebar { width: 100%; max-height: 200px; }
+  .message { max-width: 95%; }
 }

@@ -2,33 +2,48 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Lobby Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cucuri Chat Lobby</title>
   <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <!-- Login Modal (am Anfang sichtbar) -->
-  <div id="loginModal" class="modal-overlay">
+  <div id="authModal" class="modal active">
     <div class="modal-content">
-      <span class="close-btn" id="closeModal">&times;</span>
-      <h2 id="modalTitle">Login</h2>
-      <form id="authForm">
-        <input type="text" id="username" placeholder="Benutzername" required>
-        <input type="password" id="password" placeholder="Passwort" required>
-        <button type="submit" id="submitBtn">Einloggen</button>
-      </form>
-      <p id="toggleLink">Kein Account? <span id="toggleText">Registrieren</span></p>
-      <div id="errorMsg" class="error"></div>
+      <span class="close">&times;</span>
+      <div id="registerTab" class="tab active">
+        <h2>👋 Willkommen! Registrieren</h2>
+        <input type="text" id="regUsername" placeholder="Username (min. 3 Zeichen)">
+        <input type="password" id="regPassword" placeholder="Passwort">
+        <button id="registerBtn">Registrieren</button>
+        <p id="registerError" class="error"></p>
+        <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
+      </div>
+      <div id="loginTab" class="tab">
+        <h2>🔑 Einloggen</h2>
+        <input type="text" id="loginUsername" placeholder="Username">
+        <input type="password" id="loginPassword" placeholder="Passwort">
+        <button id="loginBtn">Einloggen</button>
+        <p id="loginError" class="error"></p>
+        <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
+      </div>
     </div>
   </div>
 
-  <!-- Chat (unsichtbar bis Login) -->
-  <ul id="messages" style="display: none;"></ul>
-  <form id="form" action="" style="display: none;">
-    <input id="input" autocomplete="off" placeholder="Nachricht eingeben..." />
-    <button>Senden</button>
-  </form>
+  <div id="chatContainer" class="hidden">
+    <div class="chat-main">
+      <div id="messages" class="messages"></div>
+    </div>
+    <div class="sidebar">
+      <h3>🟢 Online (<span id="onlineCount">0</span>)</h3>
+      <ul id="onlineList"></ul>
+    </div>
+    <div class="input-area">
+      <input type="text" id="messageInput" placeholder="Nachricht schreiben... (Enter zum Senden)" maxlength="500">
+      <button id="sendBtn">📤 Senden</button>
+    </div>
+  </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

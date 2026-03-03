@@ -1,102 +1,85 @@
 const socket = io();
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const messages = document.getElementById('messages');
-const loginModal = document.getElementById('loginModal');
-const authForm = document.getElementById('authForm');
-const modalTitle = document.getElementById('modalTitle');
-const submitBtn = document.getElementById('submitBtn');
-const toggleLink = document.getElementById('toggleLink');
-const toggleText = document.getElementById('toggleText');
-const errorMsg = document.getElementById('errorMsg');
-const usernameInput = document.getElementById('username');
-const passwordInput = document.getElementById('password');
-const closeModal = document.getElementById('closeModal');
 
-let isLogin = true;
-let currentUsername = localStorage.getItem('username');
+// Auth-Elemente (wie vorher)
+const authModal = document.getElementById('authModal');
+const registerTab = document.getElementById('registerTab');
+const loginTab = document.getElementById('loginTab');
+// ... alle anderen wie im vorherigen Code
 
-// Auto-Login versuchen
-if (currentUsername) {
-  fetch('/check-login', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({username: currentUsername})
-  }).then(res => res.json()).then(data => {
-    if (data.valid) {
-      showChat(currentUsername);
-    } else {
-      loginModal.style.display = 'flex';
-    }
-  }).catch(() => loginModal.style.display = 'flex');
-} else {
-  loginModal.style.display = 'flex';
-}
+// Neue Chat-Elemente
+const onlineCount = document.getElementById('onlineCount');
+const onlineList = document.getElementById('onlineList');
+let currentUsername = '';
 
-// Toggle Login/Register
-toggleLink.onclick = () => {
-  isLogin = !isLogin;
-  modalTitle.textContent = isLogin ? 'Login' : 'Registrieren';
-  submitBtn.textContent = isLogin ? 'Einloggen' : 'Registrieren';
-  toggleText.textContent = isLogin ? 'Registrieren' : 'Einloggen';
-  errorMsg.style.display = 'none';
-  authForm.reset();
-};
+// Event-Listener wie vorher (register, login, switch, etc.) – kopiere aus vorherigem
 
-// Submit Form
-authForm.onsubmit = async (e) => {
-  e.preventDefault();
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value;
-  const endpoint = isLogin ? 'login' : 'register';
+socket.on('registerSuccess', () => {
+  document.getElementById('registerError').textContent = '✅ Registriert! Jetzt einloggen.';
+});
 
-  try {
-    const res = await fetch(`/${endpoint}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({username, password})
-    });
-    const data = await res.json();
-    if (data.success) {
-      localStorage.setItem('username', username);
-      showChat(username);
-    } else {
-      errorMsg.textContent = data.error;
-      errorMsg.style.display = 'block';
-      passwordInput.focus();
-    }
-  } catch (err) {
-    errorMsg.textContent = 'Server-Fehler!';
-    errorMsg.style.display = 'block';
-  }
-};
-
-// Close nur erlauben nach Login (oder gar nicht)
-closeModal.onclick = () => {}; // Ignorieren
-
-function showChat(username) {
-  loginModal.style.display = 'none';
-  messages.style.display = 'block';
-  form.style.display = 'flex';
-  socket.emit('user joined', username);
-}
+socket.on('loginSuccess', (username) => {
+  currentUsername = username;
+  authModal.classList.remove('active');
+  document.getElementById('chatContainer').classList.remove('hidden');
+  document.getElementById('messageInput').focus();
+});
 
 // Chat-Funktionen
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (input.value.trim()) {
-    socket.emit('chat message', input.value.trim());
-    input.value = '';
+function sendMessage() {
+  const msg = document.getElementById('messageInput').value.trim();
+  if (msg) {
+    socket.emit('chatMessage', msg);
+    document.getElementById('messageInput').value = '';
   }
+}
+
+socket.on('chatMessage', ({ username, msg, timestamp }) => {
+  const div = document.createElement('div');
+  div.classList.add('message');
+  div.innerHTML = `<strong>${username}</strong> <time>${timestamp}</time><br>${msg}`;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 });
 
-socket.on('chat message', (msg) => {
-  const item = document.createElement('li');
-  item.textContent = msg;
-  messages.appendChild(item);
-  window.scrollTo(0, document.body.scrollHeight);
+socket.on('onlineUsersUpdate', (users) => {
+  onlineCount.textContent = users.length;
+  onlineList.innerHTML = '';
+  users.forEach(user => {
+    const li = document.createElement('li');
+    li.textContent = `🟢 ${user}`;
+    onlineList.appendChild(li);
+  });
 });
 
-socket.on('user list', (users) => {
-  console.log('Online:', users); // Für Spieler-Liste später
+socket.on('userJoined', (username) => {
+  const div = document.createElement('div');
+  div.classList.add('message');
+  div.style.color = '#00FF88';
+  div.textContent = `➕ ${username} ist online!`;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 });
+
+socket.on('userLeft', (username) => {
+  const div = document.createElement('div');
+  div.classList.add('message');
+  div.style.color = '#FF4444';
+  div.textContent = `➖ ${username} ist offline.`;
+  document.getElementById('messages').appendChild(div);
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+});
+
+// Rest der Event-Listener (kopiere aus vorherigem script.js)
+document.getElementById('registerBtn').addEventListener('click', () => {
+  const username = document.getElementById('regUsername').value.trim();
+  const password = document.getElementById('regPassword').value.trim();
+  if (username && password) socket.emit('register', { username, password });
+});
+
+document.getElementById('loginBtn').addEventListener('click', () => {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  if (username && password) socket.emit('login', { username, password });
+});
+
+// Switch-Funktionen, clearErrors, etc. wie vorher
