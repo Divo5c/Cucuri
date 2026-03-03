@@ -1,14 +1,17 @@
 {
-  "name": "lobby-chat",
+  "name": "chat-lobby-app",
   "version": "1.0.0",
-  "description": "Lobby mit Login",
+  "description": "Minecraft-inspirierte Chat-Lobby",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
-    "bcrypt": "^5.1.1"
+    "socket.io": "^4.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
   }
 }
