@@ -1,239 +1,55 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cucuri Chat</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+  <div id="authModal" class="modal active">
+    <div class="modal-content">
+      <span class="close" id="closeBtn">&times;</span>
+      
+      <!-- Registrieren -->
+      <div id="registerTab" class="tab active">
+        <h2>👋 Willkommen! <br>Registrieren</h2>
+        <input type="text" id="regUsername" placeholder="Username">
+        <input type="password" id="regPassword" placeholder="Passwort">
+        <button id="registerBtn">Registrieren</button>
+        <p id="registerError" class="error"></p>
+        <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
+      </div>
 
-body {
-  font-family: 'Orbitron', sans-serif;
-  height: 100vh;
-  background: #3a2e1d;
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+      <!-- Einloggen -->
+      <div id="loginTab" class="tab">
+        <h2>🔑 Einloggen</h2>
+        <input type="text" id="loginUsername" placeholder="Username">
+        <input type="password" id="loginPassword" placeholder="Passwort">
+        <button id="loginBtn">Einloggen</button>
+        <p id="loginError" class="error"></p>
+        <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
+      </div>
+    </div>
+  </div>
 
-#chatContainer {
-  display: flex;
-  width: 90vw;
-  height: 90vh;
-  max-width: 1200px;
-  background: rgba(0,0,0,0.5);
-  border: 4px solid #FFD700;
-  border-radius: 10px;
-  overflow: hidden;
-}
+  <div id="chatContainer" class="hidden">
+    <div class="chat-main">
+      <div id="messages"></div>
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Nachricht schreiben..." maxlength="200">
+        <button id="sendBtn">Senden</button>
+      </div>
+    </div>
+    <div class="sidebar">
+      <!-- Titel für die Liste aktualisiert -->
+      <h3>Mitglieder</h3>
+      <ul id="onlineList"></ul>
+    </div>
+  </div>
 
-.chat-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-#messages {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background-image: url('images/cucuri-format-3.jpg'); /* Achte darauf, dass das Bild hier liegt! */
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
-#messages::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  z-index: 0;
-}
-
-.message {
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  background: rgba(255,255,255,0.1);
-  border-left: 4px solid #00FF88;
-  border-radius: 8px;
-  color: white;
-  position: relative;
-  z-index: 1;
-  width: fit-content;
-  max-width: 80%;
-  word-wrap: break-word;
-}
-
-.message strong { color: #FFD700; }
-.message time { color: #aaa; font-size: 0.8em; margin-left: 10px; }
-
-.sidebar {
-  width: 250px;
-  background: #2a2a2a;
-  border-left: 4px solid #FFD700;
-  padding: 20px;
-  color: white;
-  overflow-y: auto;
-}
-
-.sidebar h3 { color: #00FF88; margin-bottom: 15px; text-align: center; }
-#onlineList { list-style: none; }
-#onlineList li { padding: 8px; background: rgba(0,255,136,0.2); margin-bottom: 5px; border-radius: 5px; }
-
-.input-area {
-  display: flex;
-  padding: 15px;
-  background: #222;
-  border-top: 4px solid #FFD700;
-  z-index: 2;
-}
-
-#messageInput {
-  flex: 1;
-  padding: 12px;
-  border: 2px solid #FFD700;
-  border-radius: 5px;
-  background: #fff;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 16px;
-}
-
-#sendBtn {
-  padding: 12px 20px;
-  margin-left: 10px;
-  background: #00FF88;
-  border: none;
-  border-radius: 5px;
-  font-family: 'Orbitron', sans-serif;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal.active { display: flex; }
-
-.modal-content {
-  background: #f4f4f4;
-  padding: 30px;
-  border-radius: 15px;
-  width: 350px;
-  position: relative;
-  text-align: center;
-}
-
-.close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; }
-
-.tab { display: none; }
-.tab.active { display: block; }
-
-.modal-content input {
-  width: 100%;
-  padding: 12px;
-  margin: 10px 0;
-  border: 2px solid #FFD700;
-  border-radius: 5px;
-  background: #eef5ff;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.modal-content button {
-  width: 100%;
-  padding: 12px;
-  background: #00FF88;
-  border: 2px solid #FFD700;
-  border-radius: 5px;
-  font-family: 'Orbitron', sans-serif;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.error { color: red; margin-top: 10px; font-size: 14px; }
-.modal-content a { display: block; margin-top: 15px; color: #551A8B; text-decoration: none; }
-
-.hidden { display: none !important; }
-
-/* =========================================
-   📱 MOBILE RESPONSIVE DESIGN (Media Queries)
-   Greift nur bei Bildschirmen unter 768px
-   ========================================= */
-@media screen and (max-width: 768px) {
-  
-  /* Modal (Login/Register) ans Handy anpassen */
-  .modal-content {
-    width: 90vw;           /* Nutzt fast die ganze Breite */
-    padding: 20px 15px;    /* Etwas weniger Rand innen */
-  }
-
-  .modal-content h2 {
-    font-size: 1.5rem;     /* Text etwas kleiner */
-  }
-
-  /* Chat Container für Handys auf 100% vergrößern und Ränder entfernen */
-  #chatContainer {
-    width: 100vw;
-    height: 100vh;
-    border: none;          /* Kein dicker gelber Rand am Handy */
-    border-radius: 0;
-    flex-direction: column; /* Elemente untereinander statt nebeneinander */
-  }
-
-  /* Die Online-Liste (Sidebar) verschieben */
-  .sidebar {
-    width: 100%;
-    height: auto;
-    max-height: 120px;     /* Macht die Liste klein und scrollbar */
-    border-left: none;
-    border-bottom: 3px solid #FFD700;
-    order: -1;             /* Schiebt die Online-Liste über den Chat */
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Online-Liste nebeneinander statt untereinander auf dem Handy */
-  #onlineList {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    overflow-y: auto;
-  }
-
-  #onlineList li {
-    margin-bottom: 0;
-    padding: 5px 10px;
-    font-size: 0.9rem;
-  }
-
-  .sidebar h3 {
-    margin-bottom: 5px;
-    font-size: 1rem;
-    text-align: left;
-  }
-
-  /* Nachrichten und Eingabefeld anpassen */
-  .message {
-    max-width: 90%;       /* Darf auf dem Handy breiter sein */
-    font-size: 0.9rem;
-  }
-
-  .input-area {
-    padding: 10px;
-  }
-
-  #messageInput {
-    padding: 10px;
-    font-size: 14px;      /* Verhindert Auto-Zoom auf iPhones */
-  }
-
-  #sendBtn {
-    padding: 10px 15px;
-    font-size: 14px;
-  }
-}
+  <script src="script.js"></script>
+</body>
+</html>

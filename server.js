@@ -26,7 +26,21 @@ function saveUsers() {
   fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
 }
 
+// Neue Funktion: Sendet die sortierte Liste (Online und Offline)
+function broadcastUserList() {
+  const allUsernames = Object.keys(users);
+  const onlineArray = Array.from(onlineUsers);
+  
+  const offlineArray = allUsernames.filter(user => !onlineArray.includes(user));
+
+  io.emit('updateUserList', {
+    online: onlineArray,
+    offline: offlineArray
+  });
+}
+
 io.on('connection', (socket) => {
+  
   socket.on('register', (data) => {
     const { username, password } = data;
     if (users[username]) {
@@ -37,6 +51,7 @@ io.on('connection', (socket) => {
       users[username] = password;
       saveUsers();
       socket.emit('registerSuccess');
+      broadcastUserList(); // Liste updaten, wenn neuer User registriert
     }
   });
 
@@ -45,9 +60,10 @@ io.on('connection', (socket) => {
     if (users[username] && users[username] === password) {
       sessions.set(socket.id, username);
       onlineUsers.add(username);
-      io.emit('onlineUsersUpdate', Array.from(onlineUsers));
+      
       socket.emit('loginSuccess', username);
       socket.broadcast.emit('userJoined', username);
+      broadcastUserList(); // Liste updaten
     } else {
       socket.emit('loginError', 'Falsche Daten!');
     }
@@ -66,8 +82,8 @@ io.on('connection', (socket) => {
     if (username) {
       sessions.delete(socket.id);
       onlineUsers.delete(username);
-      io.emit('onlineUsersUpdate', Array.from(onlineUsers));
       socket.broadcast.emit('userLeft', username);
+      broadcastUserList(); // Liste updaten
     }
   });
 });

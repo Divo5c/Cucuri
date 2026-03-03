@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
-  // Elemente holen
   const authModal = document.getElementById('authModal');
   const chatContainer = document.getElementById('chatContainer');
   const registerTab = document.getElementById('registerTab');
@@ -24,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const messages = document.getElementById('messages');
   const messageInput = document.getElementById('messageInput');
   const sendBtn = document.getElementById('sendBtn');
-  const onlineCount = document.getElementById('onlineCount');
   const onlineList = document.getElementById('onlineList');
 
   // Tabs wechseln
@@ -46,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     authModal.classList.remove('active');
   });
 
-  // Registrieren Button Logik
+  // Registrieren
   registerBtn.addEventListener('click', () => {
     const username = regUsername.value.trim();
     const password = regPassword.value.trim();
@@ -72,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     registerError.textContent = err;
   });
 
-  // Einloggen Button Logik
+  // Einloggen
   loginBtn.addEventListener('click', () => {
     const username = loginUsername.value.trim();
     const password = loginPassword.value.trim();
@@ -93,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginError.textContent = err;
   });
 
-  // Chat Senden Logik
+  // Chat Senden
   sendBtn.addEventListener('click', sendMessage);
   messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
@@ -116,13 +114,24 @@ document.addEventListener('DOMContentLoaded', () => {
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // Online Liste Update
-  socket.on('onlineUsersUpdate', (users) => {
-    onlineCount.textContent = users.length;
+  // NEU: User Liste Update (Online & Offline)
+  socket.on('updateUserList', (data) => {
     onlineList.innerHTML = '';
-    users.forEach(user => {
+    
+    // Zuerst alle Online User (Grün)
+    data.online.forEach(user => {
       const li = document.createElement('li');
-      li.textContent = `🟢 ${user}`;
+      li.innerHTML = `🟢 ${user}`;
+      li.style.background = 'rgba(0,255,136,0.2)'; // Grüner Hintergrund
+      onlineList.appendChild(li);
+    });
+
+    // Dann alle Offline User (Rot/Grau)
+    data.offline.forEach(user => {
+      const li = document.createElement('li');
+      li.innerHTML = `🔴 ${user}`;
+      li.style.background = 'rgba(255,0,0,0.2)'; // Roter Hintergrund
+      li.style.color = '#ccc'; // Etwas ausgegraut
       onlineList.appendChild(li);
     });
   });

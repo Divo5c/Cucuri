@@ -13,18 +13,8 @@
     <div class="modal-content">
       <span class="close" id="closeBtn">&times;</span>
       
-      <!-- Registrieren -->
-      <div id="registerTab" class="tab active">
-        <h2>👋 Willkommen! <br>Registrieren</h2>
-        <input type="text" id="regUsername" placeholder="Username">
-        <input type="password" id="regPassword" placeholder="Passwort">
-        <button id="registerBtn">Registrieren</button>
-        <p id="registerError" class="error"></p>
-        <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
-      </div>
-
-      <!-- Einloggen -->
-      <div id="loginTab" class="tab">
+      <!-- Einloggen (Jetzt standardmäßig aktiv!) -->
+      <div id="loginTab" class="tab active">
         <h2>🔑 Einloggen</h2>
         <input type="text" id="loginUsername" placeholder="Username">
         <input type="password" id="loginPassword" placeholder="Passwort">
@@ -32,6 +22,17 @@
         <p id="loginError" class="error"></p>
         <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
       </div>
+
+      <!-- Registrieren (Jetzt versteckt, bis man klickt) -->
+      <div id="registerTab" class="tab">
+        <h2>👋 Willkommen! <br>Registrieren</h2>
+        <input type="text" id="regUsername" placeholder="Username">
+        <input type="password" id="regPassword" placeholder="Passwort">
+        <button id="registerBtn">Registrieren</button>
+        <p id="registerError" class="error"></p>
+        <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
+      </div>
+      
     </div>
   </div>
 
@@ -44,7 +45,7 @@
       </div>
     </div>
     <div class="sidebar">
-      <h3>🟢 Online (<span id="onlineCount">0</span>)</h3>
+      <h3>Mitglieder</h3>
       <ul id="onlineList"></ul>
     </div>
   </div>
