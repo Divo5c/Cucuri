@@ -3,22 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cucuri Chat Lobby</title>
+  <title>Cucuri Chat</title>
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+
   <div id="authModal" class="modal active">
     <div class="modal-content">
-      <span class="close">&times;</span>
+      <span class="close" id="closeBtn">&times;</span>
+      
+      <!-- Registrieren -->
       <div id="registerTab" class="tab active">
-        <h2>👋 Willkommen! Registrieren</h2>
-        <input type="text" id="regUsername" placeholder="Username (min. 3 Zeichen)">
+        <h2>👋 Willkommen! <br>Registrieren</h2>
+        <input type="text" id="regUsername" placeholder="Username">
         <input type="password" id="regPassword" placeholder="Passwort">
         <button id="registerBtn">Registrieren</button>
         <p id="registerError" class="error"></p>
         <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
       </div>
+
+      <!-- Einloggen -->
       <div id="loginTab" class="tab">
         <h2>🔑 Einloggen</h2>
         <input type="text" id="loginUsername" placeholder="Username">
@@ -32,15 +37,15 @@
 
   <div id="chatContainer" class="hidden">
     <div class="chat-main">
-      <div id="messages" class="messages"></div>
+      <div id="messages"></div>
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Nachricht schreiben..." maxlength="200">
+        <button id="sendBtn">Senden</button>
+      </div>
     </div>
     <div class="sidebar">
       <h3>🟢 Online (<span id="onlineCount">0</span>)</h3>
       <ul id="onlineList"></ul>
-    </div>
-    <div class="input-area">
-      <input type="text" id="messageInput" placeholder="Nachricht schreiben... (Enter zum Senden)" maxlength="500">
-      <button id="sendBtn">📤 Senden</button>
     </div>
   </div>
 

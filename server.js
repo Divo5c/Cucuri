@@ -1,36 +1,38 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const path = require('path');
 const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, { cors: { origin: "*" } });
+const io = socketIo(server);
 
 app.use(express.static('public'));
 app.use(express.json());
 
 let users = {};
-if (fs.existsSync('users.json')) {
-  users = JSON.parse(fs.readFileSync('users.json', 'utf8'));
+try {
+  if (fs.existsSync('users.json')) {
+    users = JSON.parse(fs.readFileSync('users.json', 'utf8'));
+  }
+} catch (e) {
+  fs.writeFileSync('users.json', '{}');
 }
 
-const sessions = new Map(); // socket.id -> username
-const onlineUsers = new Set(); // Aktive Usernames
+const sessions = new Map();
+const onlineUsers = new Set();
 
 function saveUsers() {
   fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
 }
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('register', ({ username, password }) => {
+  socket.on('register', (data) => {
+    const { username, password } = data;
     if (users[username]) {
       socket.emit('registerError', 'Username existiert bereits');
     } else if (username.length < 3) {
-      socket.emit('registerError', 'Username mind. 3 Zeichen');
+      socket.emit('registerError', 'Min. 3 Zeichen erforderlich');
     } else {
       users[username] = password;
       saveUsers();
@@ -38,7 +40,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('login', ({ username, password }) => {
+  socket.on('login', (data) => {
+    const { username, password } = data;
     if (users[username] && users[username] === password) {
       sessions.set(socket.id, username);
       onlineUsers.add(username);
@@ -46,14 +49,14 @@ io.on('connection', (socket) => {
       socket.emit('loginSuccess', username);
       socket.broadcast.emit('userJoined', username);
     } else {
-      socket.emit('loginError', 'Falscher Username oder Passwort');
+      socket.emit('loginError', 'Falsche Daten!');
     }
   });
 
   socket.on('chatMessage', (msg) => {
     const username = sessions.get(socket.id);
     if (username) {
-      const timestamp = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
       io.emit('chatMessage', { username, msg, timestamp });
     }
   });
@@ -70,4 +73,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server auf Port ${PORT}`));
+server.listen(PORT, () => console.log('Server läuft auf Port ' + PORT));

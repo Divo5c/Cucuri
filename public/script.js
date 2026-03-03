@@ -1,85 +1,148 @@
-const socket = io();
+document.addEventListener('DOMContentLoaded', () => {
+  const socket = io();
 
-// Auth-Elemente (wie vorher)
-const authModal = document.getElementById('authModal');
-const registerTab = document.getElementById('registerTab');
-const loginTab = document.getElementById('loginTab');
-// ... alle anderen wie im vorherigen Code
+  // Elemente holen
+  const authModal = document.getElementById('authModal');
+  const chatContainer = document.getElementById('chatContainer');
+  const registerTab = document.getElementById('registerTab');
+  const loginTab = document.getElementById('loginTab');
 
-// Neue Chat-Elemente
-const onlineCount = document.getElementById('onlineCount');
-const onlineList = document.getElementById('onlineList');
-let currentUsername = '';
+  const regUsername = document.getElementById('regUsername');
+  const regPassword = document.getElementById('regPassword');
+  const registerBtn = document.getElementById('registerBtn');
+  const registerError = document.getElementById('registerError');
 
-// Event-Listener wie vorher (register, login, switch, etc.) – kopiere aus vorherigem
+  const loginUsername = document.getElementById('loginUsername');
+  const loginPassword = document.getElementById('loginPassword');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
 
-socket.on('registerSuccess', () => {
-  document.getElementById('registerError').textContent = '✅ Registriert! Jetzt einloggen.';
-});
+  const switchToLogin = document.getElementById('switchToLogin');
+  const switchToRegister = document.getElementById('switchToRegister');
+  const closeBtn = document.getElementById('closeBtn');
 
-socket.on('loginSuccess', (username) => {
-  currentUsername = username;
-  authModal.classList.remove('active');
-  document.getElementById('chatContainer').classList.remove('hidden');
-  document.getElementById('messageInput').focus();
-});
+  const messages = document.getElementById('messages');
+  const messageInput = document.getElementById('messageInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const onlineCount = document.getElementById('onlineCount');
+  const onlineList = document.getElementById('onlineList');
 
-// Chat-Funktionen
-function sendMessage() {
-  const msg = document.getElementById('messageInput').value.trim();
-  if (msg) {
-    socket.emit('chatMessage', msg);
-    document.getElementById('messageInput').value = '';
+  // Tabs wechseln
+  switchToLogin.addEventListener('click', (e) => {
+    e.preventDefault();
+    registerTab.classList.remove('active');
+    loginTab.classList.add('active');
+    registerError.textContent = '';
+  });
+
+  switchToRegister.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginTab.classList.remove('active');
+    registerTab.classList.add('active');
+    loginError.textContent = '';
+  });
+
+  closeBtn.addEventListener('click', () => {
+    authModal.classList.remove('active');
+  });
+
+  // Registrieren Button Logik
+  registerBtn.addEventListener('click', () => {
+    const username = regUsername.value.trim();
+    const password = regPassword.value.trim();
+    if (!username || !password) {
+      registerError.textContent = 'Bitte alles ausfüllen!';
+      return;
+    }
+    socket.emit('register', { username, password });
+  });
+
+  socket.on('registerSuccess', () => {
+    registerError.style.color = 'green';
+    registerError.textContent = 'Erfolgreich! Bitte einloggen.';
+    setTimeout(() => {
+      registerTab.classList.remove('active');
+      loginTab.classList.add('active');
+      registerError.textContent = '';
+    }, 1500);
+  });
+
+  socket.on('registerError', (err) => {
+    registerError.style.color = 'red';
+    registerError.textContent = err;
+  });
+
+  // Einloggen Button Logik
+  loginBtn.addEventListener('click', () => {
+    const username = loginUsername.value.trim();
+    const password = loginPassword.value.trim();
+    if (!username || !password) {
+      loginError.textContent = 'Bitte alles ausfüllen!';
+      return;
+    }
+    socket.emit('login', { username, password });
+  });
+
+  socket.on('loginSuccess', (username) => {
+    authModal.classList.remove('active');
+    chatContainer.classList.remove('hidden');
+    chatContainer.style.display = 'flex';
+  });
+
+  socket.on('loginError', (err) => {
+    loginError.textContent = err;
+  });
+
+  // Chat Senden Logik
+  sendBtn.addEventListener('click', sendMessage);
+  messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  function sendMessage() {
+    const msg = messageInput.value.trim();
+    if (msg) {
+      socket.emit('chatMessage', msg);
+      messageInput.value = '';
+    }
   }
-}
 
-socket.on('chatMessage', ({ username, msg, timestamp }) => {
-  const div = document.createElement('div');
-  div.classList.add('message');
-  div.innerHTML = `<strong>${username}</strong> <time>${timestamp}</time><br>${msg}`;
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-});
+  // Nachrichten empfangen
+  socket.on('chatMessage', (data) => {
+    const div = document.createElement('div');
+    div.classList.add('message');
+    div.innerHTML = `<strong>${data.username}</strong> <time>${data.timestamp}</time><br>${data.msg}`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
 
-socket.on('onlineUsersUpdate', (users) => {
-  onlineCount.textContent = users.length;
-  onlineList.innerHTML = '';
-  users.forEach(user => {
-    const li = document.createElement('li');
-    li.textContent = `🟢 ${user}`;
-    onlineList.appendChild(li);
+  // Online Liste Update
+  socket.on('onlineUsersUpdate', (users) => {
+    onlineCount.textContent = users.length;
+    onlineList.innerHTML = '';
+    users.forEach(user => {
+      const li = document.createElement('li');
+      li.textContent = `🟢 ${user}`;
+      onlineList.appendChild(li);
+    });
+  });
+
+  // Join / Leave Alerts
+  socket.on('userJoined', (username) => {
+    const div = document.createElement('div');
+    div.classList.add('message');
+    div.style.color = '#00FF88';
+    div.textContent = `➕ ${username} ist beigetreten`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  socket.on('userLeft', (username) => {
+    const div = document.createElement('div');
+    div.classList.add('message');
+    div.style.color = '#FF4444';
+    div.textContent = `➖ ${username} hat verlassen`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
   });
 });
-
-socket.on('userJoined', (username) => {
-  const div = document.createElement('div');
-  div.classList.add('message');
-  div.style.color = '#00FF88';
-  div.textContent = `➕ ${username} ist online!`;
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-});
-
-socket.on('userLeft', (username) => {
-  const div = document.createElement('div');
-  div.classList.add('message');
-  div.style.color = '#FF4444';
-  div.textContent = `➖ ${username} ist offline.`;
-  document.getElementById('messages').appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-});
-
-// Rest der Event-Listener (kopiere aus vorherigem script.js)
-document.getElementById('registerBtn').addEventListener('click', () => {
-  const username = document.getElementById('regUsername').value.trim();
-  const password = document.getElementById('regPassword').value.trim();
-  if (username && password) socket.emit('register', { username, password });
-});
-
-document.getElementById('loginBtn').addEventListener('click', () => {
-  const username = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-  if (username && password) socket.emit('login', { username, password });
-});
-
-// Switch-Funktionen, clearErrors, etc. wie vorher
