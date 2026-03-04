@@ -22,15 +22,17 @@ try {
 const sessions = new Map();
 const onlineUsers = new Set();
 
+// NEU: Hier speichern wir die letzten 100 Nachrichten
+const chatHistory = [];
+const MAX_HISTORY = 100;
+
 function saveUsers() {
   fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
 }
 
-// Neue Funktion: Sendet die sortierte Liste (Online und Offline)
 function broadcastUserList() {
   const allUsernames = Object.keys(users);
   const onlineArray = Array.from(onlineUsers);
-  
   const offlineArray = allUsernames.filter(user => !onlineArray.includes(user));
 
   io.emit('updateUserList', {
@@ -51,7 +53,7 @@ io.on('connection', (socket) => {
       users[username] = password;
       saveUsers();
       socket.emit('registerSuccess');
-      broadcastUserList(); // Liste updaten, wenn neuer User registriert
+      broadcastUserList(); 
     }
   });
 
@@ -61,9 +63,12 @@ io.on('connection', (socket) => {
       sessions.set(socket.id, username);
       onlineUsers.add(username);
       
+      // Beim Login: Sende dem User die letzten 100 Nachrichten!
       socket.emit('loginSuccess', username);
+      socket.emit('loadHistory', chatHistory);
+      
       socket.broadcast.emit('userJoined', username);
-      broadcastUserList(); // Liste updaten
+      broadcastUserList(); 
     } else {
       socket.emit('loginError', 'Falsche Daten!');
     }
@@ -73,7 +78,18 @@ io.on('connection', (socket) => {
     const username = sessions.get(socket.id);
     if (username) {
       const timestamp = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
-      io.emit('chatMessage', { username, msg, timestamp });
+      
+      const messageData = { username, msg, timestamp };
+      
+      // NEU: Speichere Nachricht in der Historie
+      chatHistory.push(messageData);
+      
+      // Wenn es mehr als 100 sind, lösche die älteste
+      if (chatHistory.length > MAX_HISTORY) {
+        chatHistory.shift();
+      }
+
+      io.emit('chatMessage', messageData);
     }
   });
 
@@ -83,7 +99,7 @@ io.on('connection', (socket) => {
       sessions.delete(socket.id);
       onlineUsers.delete(username);
       socket.broadcast.emit('userLeft', username);
-      broadcastUserList(); // Liste updaten
+      broadcastUserList(); 
     }
   });
 });
