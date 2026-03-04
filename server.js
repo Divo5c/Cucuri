@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
-const fs = require('fs');
+const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,89 +10,143 @@ const io = socketIo(server);
 app.use(express.static('public'));
 app.use(express.json());
 
-let users = {};
-try {
-  if (fs.existsSync('users.json')) {
-    users = JSON.parse(fs.readFileSync('users.json', 'utf8'));
+// ==========================================
+// MONGODB VERBINDUNG AUFBAUEN
+// ==========================================
+const MONGO_URI = process.env.MONGO_URI || 'DEIN_FALLBACK_STRING_HIER_NUR_ZUM_LOKALEN_TESTEN';
+
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
+  .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err));
+
+// ==========================================
+// DATENBANK MODELLE (Schemas)
+// ==========================================
+// So sieht ein User in der Datenbank aus
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+const User = mongoose.model('User', userSchema);
+
+// So sieht eine Nachricht in der Datenbank aus (Chat-Historie)
+const messageSchema = new mongoose.Schema({
+  username: String,
+  msg: String,
+  timestamp: String
+});
+const Message = mongoose.model('Message', messageSchema);
+
+// ==========================================
+// VARIABLEN FÜR DEN SERVER
+// ==========================================
+const sessions = new Map(); // Speichert, welcher Socket zu welchem User gehört
+const onlineUsers = new Set(); // Speichert alle aktuell aktiven User
+
+// Hilfsfunktion: Schickt die aktuelle Online/Offline Liste an alle
+async function broadcastUserList() {
+  try {
+    // Holt alle User aus der Datenbank (nur die Namen)
+    const allUsers = await User.find({}, 'username');
+    const allUsernames = allUsers.map(u => u.username);
+    
+    const onlineArray = Array.from(onlineUsers);
+    const offlineArray = allUsernames.filter(u => !onlineArray.includes(u));
+
+    io.emit('updateUserList', {
+      online: onlineArray,
+      offline: offlineArray
+    });
+  } catch (err) {
+    console.error("Fehler beim Laden der User-Liste:", err);
   }
-} catch (e) {
-  fs.writeFileSync('users.json', '{}');
 }
 
-const sessions = new Map();
-const onlineUsers = new Set();
-
-// NEU: Hier speichern wir die letzten 100 Nachrichten
-const chatHistory = [];
-const MAX_HISTORY = 100;
-
-function saveUsers() {
-  fs.writeFileSync('users.json', JSON.stringify(users, null, 2));
-}
-
-function broadcastUserList() {
-  const allUsernames = Object.keys(users);
-  const onlineArray = Array.from(onlineUsers);
-  const offlineArray = allUsernames.filter(user => !onlineArray.includes(user));
-
-  io.emit('updateUserList', {
-    online: onlineArray,
-    offline: offlineArray
-  });
-}
-
+// ==========================================
+// SOCKET.IO LOGIK
+// ==========================================
 io.on('connection', (socket) => {
   
-  socket.on('register', (data) => {
+  // REGISTRIEREN
+  socket.on('register', async (data) => {
     const { username, password } = data;
-    if (users[username]) {
-      socket.emit('registerError', 'Username existiert bereits');
-    } else if (username.length < 3) {
-      socket.emit('registerError', 'Min. 3 Zeichen erforderlich');
-    } else {
-      users[username] = password;
-      saveUsers();
-      socket.emit('registerSuccess');
-      broadcastUserList(); 
+    if (username.length < 3) {
+      return socket.emit('registerError', 'Min. 3 Zeichen erforderlich');
+    }
+
+    try {
+      const existingUser = await User.findOne({ username });
+      if (existingUser) {
+        socket.emit('registerError', 'Username existiert bereits');
+      } else {
+        // Neuen User in die Datenbank speichern!
+        const newUser = new User({ username, password });
+        await newUser.save();
+        
+        socket.emit('registerSuccess');
+        broadcastUserList(); 
+      }
+    } catch (err) {
+      socket.emit('registerError', 'Datenbank-Fehler beim Registrieren.');
     }
   });
 
-  socket.on('login', (data) => {
+  // EINLOGGEN
+  socket.on('login', async (data) => {
     const { username, password } = data;
-    if (users[username] && users[username] === password) {
-      sessions.set(socket.id, username);
-      onlineUsers.add(username);
+    
+    try {
+      // Prüfen, ob User in der Datenbank existiert und Passwort stimmt
+      const user = await User.findOne({ username, password });
       
-      // Beim Login: Sende dem User die letzten 100 Nachrichten!
-      socket.emit('loginSuccess', username);
-      socket.emit('loadHistory', chatHistory);
-      
-      socket.broadcast.emit('userJoined', username);
-      broadcastUserList(); 
-    } else {
-      socket.emit('loginError', 'Falsche Daten!');
+      if (user) {
+        sessions.set(socket.id, username);
+        onlineUsers.add(username);
+        
+        socket.emit('loginSuccess', username);
+        
+        // Letzte 100 Nachrichten aus der Datenbank holen und senden
+        const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
+        socket.emit('loadHistory', chatHistory.reverse()); // Umdrehen, damit die älteste oben ist
+        
+        socket.broadcast.emit('userJoined', username);
+        broadcastUserList(); 
+      } else {
+        socket.emit('loginError', 'Falsche Daten!');
+      }
+    } catch (err) {
+      socket.emit('loginError', 'Datenbank-Fehler beim Login.');
     }
   });
 
-  socket.on('chatMessage', (msg) => {
+  // CHAT-NACHRICHT SENDEN
+  socket.on('chatMessage', async (msg) => {
     const username = sessions.get(socket.id);
     if (username) {
       const timestamp = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
-      
       const messageData = { username, msg, timestamp };
       
-      // NEU: Speichere Nachricht in der Historie
-      chatHistory.push(messageData);
-      
-      // Wenn es mehr als 100 sind, lösche die älteste
-      if (chatHistory.length > MAX_HISTORY) {
-        chatHistory.shift();
-      }
+      try {
+        // Nachricht in der Datenbank speichern
+        const newMsg = new Message(messageData);
+        await newMsg.save();
+        
+        // An alle schicken
+        io.emit('chatMessage', messageData);
 
-      io.emit('chatMessage', messageData);
+        // Optional: Lösche alte Nachrichten, wenn es mehr als 100 sind
+        const count = await Message.countDocuments();
+        if (count > 100) {
+          const oldestMsg = await Message.findOne().sort({ _id: 1 });
+          if (oldestMsg) await Message.findByIdAndDelete(oldestMsg._id);
+        }
+      } catch (err) {
+        console.error("Fehler beim Speichern der Nachricht:", err);
+      }
     }
   });
 
+  // VERLASSEN
   socket.on('disconnect', () => {
     const username = sessions.get(socket.id);
     if (username) {
@@ -105,4 +159,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log('Server läuft auf Port ' + PORT));
+server.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
