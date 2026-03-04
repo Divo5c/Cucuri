@@ -13,16 +13,19 @@ app.use(express.json());
 // ==========================================
 // MONGODB VERBINDUNG AUFBAUEN
 // ==========================================
-// Wir lesen den String aus den Render Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
   console.error('❌ KRITISCHER FEHLER: MONGO_URI wurde in Render nicht gefunden!');
 } else {
-  // WICHTIG: Keine alten Optionen mehr, damit Mongoose nicht warnt/crasht
+  console.log('⏳ Verbinde mit MongoDB... (Bitte warten)');
   mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
-    .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err.message));
+    .then(() => {
+      console.log('✅ Erfolgreich mit MongoDB verbunden!');
+    })
+    .catch(err => {
+      console.error('❌ MongoDB Verbindungsfehler:', err.message);
+    });
 }
 
 // ==========================================
@@ -71,9 +74,9 @@ io.on('connection', (socket) => {
   
   // REGISTRIEREN
   socket.on('register', async (data) => {
-    // Falls Mongoose noch lädt, blockieren wir den Versuch
+    // Neu: Erklärende Fehlermeldung, wenn die Verbindung gerade noch aufgebaut wird
     if (mongoose.connection.readyState !== 1) {
-      return socket.emit('registerError', 'Server hat keine Verbindung zur Datenbank.');
+      return socket.emit('registerError', 'Verbindung zur Datenbank wird aufgebaut... Bitte in 5 Sekunden nochmal versuchen.');
     }
 
     const { username, password } = data;
@@ -99,8 +102,9 @@ io.on('connection', (socket) => {
 
   // EINLOGGEN
   socket.on('login', async (data) => {
+    // Neu: Erklärende Fehlermeldung, wenn die Verbindung gerade noch aufgebaut wird
     if (mongoose.connection.readyState !== 1) {
-      return socket.emit('loginError', 'Server hat keine Verbindung zur Datenbank.');
+      return socket.emit('loginError', 'Verbindung zur Datenbank wird aufgebaut... Bitte in 5 Sekunden nochmal versuchen.');
     }
 
     const { username, password } = data;
