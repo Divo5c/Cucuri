@@ -16,12 +16,11 @@ app.use(express.json());
 // Wir lesen den String aus den Render Environment Variables
 const MONGO_URI = process.env.MONGO_URI;
 
-// WICHTIG: Prüfen, ob der String überhaupt da ist!
 if (!MONGO_URI) {
-  console.error('❌ KRITISCHER FEHLER: MONGO_URI wurde in Render nicht gefunden! Bitte unter "Environment" prüfen.');
+  console.error('❌ KRITISCHER FEHLER: MONGO_URI wurde in Render nicht gefunden!');
 } else {
-  // Verbindung aufbauen mit Extra-Optionen für Stabilität
-  mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  // WICHTIG: Keine alten Optionen mehr, damit Mongoose nicht warnt/crasht
+  mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
     .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err.message));
 }
@@ -33,7 +32,6 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true }
 });
-// Falls User schon existiert, wird das Modell nicht neu überschrieben (verhindert Crashs)
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 const messageSchema = new mongoose.Schema({
@@ -73,7 +71,7 @@ io.on('connection', (socket) => {
   
   // REGISTRIEREN
   socket.on('register', async (data) => {
-    // Prüfen ob Datenbank überhaupt verbunden ist
+    // Falls Mongoose noch lädt, blockieren wir den Versuch
     if (mongoose.connection.readyState !== 1) {
       return socket.emit('registerError', 'Server hat keine Verbindung zur Datenbank.');
     }
@@ -101,7 +99,6 @@ io.on('connection', (socket) => {
 
   // EINLOGGEN
   socket.on('login', async (data) => {
-    // Prüfen ob Datenbank überhaupt verbunden ist
     if (mongoose.connection.readyState !== 1) {
       return socket.emit('loginError', 'Server hat keine Verbindung zur Datenbank.');
     }
