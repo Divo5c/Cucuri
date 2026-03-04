@@ -13,40 +13,44 @@ app.use(express.json());
 // ==========================================
 // MONGODB VERBINDUNG AUFBAUEN
 // ==========================================
-const MONGO_URI = process.env.MONGO_URI || 'DEIN_FALLBACK_STRING_HIER_NUR_ZUM_LOKALEN_TESTEN';
+// Wir lesen den String aus den Render Environment Variables
+const MONGO_URI = process.env.MONGO_URI;
 
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
-  .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err));
+// WICHTIG: Prüfen, ob der String überhaupt da ist!
+if (!MONGO_URI) {
+  console.error('❌ KRITISCHER FEHLER: MONGO_URI wurde in Render nicht gefunden! Bitte unter "Environment" prüfen.');
+} else {
+  // Verbindung aufbauen mit Extra-Optionen für Stabilität
+  mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
+    .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err.message));
+}
 
 // ==========================================
 // DATENBANK MODELLE (Schemas)
 // ==========================================
-// So sieht ein User in der Datenbank aus
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true }
 });
-const User = mongoose.model('User', userSchema);
+// Falls User schon existiert, wird das Modell nicht neu überschrieben (verhindert Crashs)
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// So sieht eine Nachricht in der Datenbank aus (Chat-Historie)
 const messageSchema = new mongoose.Schema({
   username: String,
   msg: String,
   timestamp: String
 });
-const Message = mongoose.model('Message', messageSchema);
+const Message = mongoose.models.Message || mongoose.model('Message', messageSchema);
 
 // ==========================================
 // VARIABLEN FÜR DEN SERVER
 // ==========================================
-const sessions = new Map(); // Speichert, welcher Socket zu welchem User gehört
-const onlineUsers = new Set(); // Speichert alle aktuell aktiven User
+const sessions = new Map();
+const onlineUsers = new Set();
 
-// Hilfsfunktion: Schickt die aktuelle Online/Offline Liste an alle
 async function broadcastUserList() {
   try {
-    // Holt alle User aus der Datenbank (nur die Namen)
     const allUsers = await User.find({}, 'username');
     const allUsernames = allUsers.map(u => u.username);
     
@@ -58,7 +62,7 @@ async function broadcastUserList() {
       offline: offlineArray
     });
   } catch (err) {
-    console.error("Fehler beim Laden der User-Liste:", err);
+    console.error("Fehler beim Laden der User-Liste:", err.message);
   }
 }
 
@@ -69,6 +73,11 @@ io.on('connection', (socket) => {
   
   // REGISTRIEREN
   socket.on('register', async (data) => {
+    // Prüfen ob Datenbank überhaupt verbunden ist
+    if (mongoose.connection.readyState !== 1) {
+      return socket.emit('registerError', 'Server hat keine Verbindung zur Datenbank.');
+    }
+
     const { username, password } = data;
     if (username.length < 3) {
       return socket.emit('registerError', 'Min. 3 Zeichen erforderlich');
@@ -79,24 +88,27 @@ io.on('connection', (socket) => {
       if (existingUser) {
         socket.emit('registerError', 'Username existiert bereits');
       } else {
-        // Neuen User in die Datenbank speichern!
         const newUser = new User({ username, password });
         await newUser.save();
-        
         socket.emit('registerSuccess');
         broadcastUserList(); 
       }
     } catch (err) {
+      console.error('Register Fehler:', err.message);
       socket.emit('registerError', 'Datenbank-Fehler beim Registrieren.');
     }
   });
 
   // EINLOGGEN
   socket.on('login', async (data) => {
+    // Prüfen ob Datenbank überhaupt verbunden ist
+    if (mongoose.connection.readyState !== 1) {
+      return socket.emit('loginError', 'Server hat keine Verbindung zur Datenbank.');
+    }
+
     const { username, password } = data;
     
     try {
-      // Prüfen, ob User in der Datenbank existiert und Passwort stimmt
       const user = await User.findOne({ username, password });
       
       if (user) {
@@ -105,16 +117,16 @@ io.on('connection', (socket) => {
         
         socket.emit('loginSuccess', username);
         
-        // Letzte 100 Nachrichten aus der Datenbank holen und senden
         const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
-        socket.emit('loadHistory', chatHistory.reverse()); // Umdrehen, damit die älteste oben ist
+        socket.emit('loadHistory', chatHistory.reverse()); 
         
         socket.broadcast.emit('userJoined', username);
         broadcastUserList(); 
       } else {
-        socket.emit('loginError', 'Falsche Daten!');
+        socket.emit('loginError', 'Falsche Daten oder Account existiert nicht!');
       }
     } catch (err) {
+      console.error('Login Fehler:', err.message);
       socket.emit('loginError', 'Datenbank-Fehler beim Login.');
     }
   });
@@ -127,21 +139,17 @@ io.on('connection', (socket) => {
       const messageData = { username, msg, timestamp };
       
       try {
-        // Nachricht in der Datenbank speichern
         const newMsg = new Message(messageData);
         await newMsg.save();
-        
-        // An alle schicken
         io.emit('chatMessage', messageData);
 
-        // Optional: Lösche alte Nachrichten, wenn es mehr als 100 sind
         const count = await Message.countDocuments();
         if (count > 100) {
           const oldestMsg = await Message.findOne().sort({ _id: 1 });
           if (oldestMsg) await Message.findByIdAndDelete(oldestMsg._id);
         }
       } catch (err) {
-        console.error("Fehler beim Speichern der Nachricht:", err);
+        console.error("Fehler beim Speichern der Nachricht:", err.message);
       }
     }
   });
