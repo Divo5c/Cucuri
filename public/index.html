@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cucuri Chat</title>
-  <!-- Wichtig: Das verlinkt auf dein Design -->
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -15,7 +14,6 @@
     <div class="modal-content">
       <span class="close" id="closeBtn">&times;</span>
       
-      <!-- Einloggen (class="tab active" macht es standardmäßig sichtbar) -->
       <div id="loginTab" class="tab active">
         <h2>🔑 Einloggen</h2>
         <input type="text" id="loginUsername" placeholder="Username">
@@ -25,7 +23,6 @@
         <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
       </div>
 
-      <!-- Registrieren (class="tab" macht es standardmäßig versteckt) -->
       <div id="registerTab" class="tab">
         <h2>👋 Willkommen! <br>Registrieren</h2>
         <input type="text" id="regUsername" placeholder="Username">
@@ -50,6 +47,17 @@
     <div class="sidebar">
       <h3>Mitglieder</h3>
       <ul id="onlineList"></ul>
+    </div>
+  </div>
+
+  <!-- NEU: Das Slide-Out Games-Menü -->
+  <div id="gamesMenu" class="games-menu">
+    <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
+    <div class="games-list">
+      <a href="https://makeitmeme.com/de/" target="_blank" class="game-btn meme">Make It Meme</a>
+      <a href="https://skribbl.io/" target="_blank" class="game-btn skribbl">Skribbl.io</a>
+      <a href="https://agar.io/" target="_blank" class="game-btn agario">Agar.io</a>
+      <a href="https://openguessr.com/multiplayer" target="_blank" class="game-btn guessr">OpenGuessr</a>
     </div>
   </div>
 
