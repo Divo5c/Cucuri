@@ -14,19 +14,23 @@
     <div class="modal-content">
       <span class="close" id="closeBtn">&times;</span>
       
+      <!-- Einloggen -->
       <div id="loginTab" class="tab active">
         <h2>🔑 Einloggen</h2>
         <input type="text" id="loginUsername" placeholder="Username">
         <input type="password" id="loginPassword" placeholder="Passwort">
+        <!-- WICHTIG: Die ID muss exakt loginBtn heißen -->
         <button id="loginBtn">Einloggen</button>
         <p id="loginError" class="error"></p>
         <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
       </div>
 
+      <!-- Registrieren -->
       <div id="registerTab" class="tab">
         <h2>👋 Willkommen! <br>Registrieren</h2>
         <input type="text" id="regUsername" placeholder="Username">
         <input type="password" id="regPassword" placeholder="Passwort">
+        <!-- WICHTIG: Die ID muss exakt registerBtn heißen -->
         <button id="registerBtn">Registrieren</button>
         <p id="registerError" class="error"></p>
         <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
@@ -50,7 +54,7 @@
     </div>
   </div>
 
-  <!-- NEU: Das Slide-Out Games-Menü -->
+  <!-- Das Slide-Out Games-Menü -->
   <div id="gamesMenu" class="games-menu">
     <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
     <div class="games-list">
