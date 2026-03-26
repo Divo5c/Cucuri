@@ -131,7 +131,6 @@ html, body {
   transition: transform 0.3s ease-in-out;
 }
 
-/* Das Menü ist standardmäßig auf dem Handy draußen (geschlossen) */
 .games-menu.closed {
   transform: translate(-100%, -50%);
 }
@@ -147,7 +146,6 @@ html, body {
   gap: 10px;
 }
 
-/* Der Aufklapp-Button (Pfeil / Controller) */
 .toggle-btn {
   background: #FFD700;
   border: 3px solid #4A4A4A;
@@ -157,7 +155,7 @@ html, body {
   cursor: pointer;
   border-radius: 0 10px 10px 0;
   position: absolute;
-  right: -45px; /* Schiebt den Button rechts neben die Liste */
+  right: -45px;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
 }
 
@@ -179,6 +177,7 @@ html, body {
 .skribbl { background: #1E90FF; border-color: #00BFFF; }
 .agario { background: #32CD32; border-color: #00FF00; }
 .guessr { background: #8A2BE2; border-color: #9370DB; }
+.meinspiel { background: #FF1493; border-color: #FF69B4; }  /* NEU - Pink */
 
 /* =========================================
    📱 MOBILE RESPONSIVE DESIGN 
@@ -200,7 +199,6 @@ html, body {
   #messageInput { padding: 10px; font-size: 16px; }
   #sendBtn { padding: 10px 15px; font-size: 14px; }
 
-  /* Games Menü auf Handy leicht anpassen */
   .games-list { padding: 10px; gap: 8px; }
   .game-btn { font-size: 12px; padding: 8px 10px; }
   .toggle-btn { padding: 10px 5px; right: -35px; }
