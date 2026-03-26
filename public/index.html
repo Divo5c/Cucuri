@@ -4,17 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cucuri Chat</title>
+  <link rel="icon" href="favicon.png">
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-  <!-- Modal = Das Popup für Login/Registrieren -->
   <div id="authModal" class="modal active">
     <div class="modal-content">
       <span class="close" id="closeBtn">&times;</span>
       
-      <!-- Einloggen -->
       <div id="loginTab" class="tab active">
         <h2>🔑 Einloggen</h2>
         <input type="text" id="loginUsername" placeholder="Username">
@@ -24,7 +23,6 @@
         <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
       </div>
 
-      <!-- Registrieren -->
       <div id="registerTab" class="tab">
         <h2>👋 Willkommen! <br>Registrieren</h2>
         <input type="text" id="regUsername" placeholder="Username">
@@ -37,7 +35,6 @@
     </div>
   </div>
 
-  <!-- Chat Bereich -->
   <div id="chatContainer" class="hidden">
     <div class="chat-main">
       <div id="messages"></div>
@@ -52,7 +49,6 @@
     </div>
   </div>
 
-  <!-- Das Slide-Out Games-Menü -->
   <div id="gamesMenu" class="games-menu">
     <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
     <div class="games-list">
@@ -60,7 +56,7 @@
       <a href="https://skribbl.io/" target="_blank" class="game-btn skribbl">Skribbl.io</a>
       <a href="https://agar.io/" target="_blank" class="game-btn agario">Agar.io</a>
       <a href="https://openguessr.com/multiplayer" target="_blank" class="game-btn guessr">OpenGuessr</a>
-      <a href="/spiel.html" target="_blank" class="game-btn">🎮 Mein Spiel</a>
+      <a href="/spiel.html" target="_blank" class="game-btn meinspiel">🎮 Mein Spiel</a>
     </div>
   </div>
 
