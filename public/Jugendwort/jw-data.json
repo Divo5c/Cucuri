@@ -1,22 +1,47 @@
 [
   {
-    "id": "start-1",
-    "term": "das crazy",
-    "meaning": "Wird gesagt, wenn etwas komplett absurd/unfassbar ist.",
-    "example": "Bruder, dein Aim war das crazy.",
-    "author": "Lokale Crew",
-    "date": "2025-10-17T00:00:00.000Z",
-    "tags": ["top", "klassiker"],
-    "votes": 5
+    "id": "jw-trei",
+    "term": "Trei",
+    "meaning": "Eine neuentwickelte Version von „Drei“. Wird verwendet, wenn „drei“ im Alltag vorkommt."
   },
   {
-    "id": "start-2",
-    "term": "lowkey nice",
-    "meaning": "Etwas ist heimlich gut, aber man spielt es runter.",
-    "example": "Das neue Map-Design ist lowkey nice.",
-    "author": "Discord-Chat",
-    "date": "2025-08-11T00:00:00.000Z",
-    "tags": ["gaming"],
-    "votes": 2
+    "id": "jw-schaere",
+    "term": "Schäre",
+    "meaning": "Eine neuentwickelte Version von „Schere“. Wird benutzt, als Entschuldigung."
+  },
+  {
+    "id": "jw-giiiigiiis",
+    "term": "Giiiigiiis",
+    "meaning": "Ein hoch betonter Ausruf von „GGs“ (Good Games). Kann im Sinne von „GGs“ verwendet werden."
+  },
+  {
+    "id": "jw-nos",
+    "term": "Nos",
+    "meaning": "Weiterentwickelung von „Nosnau“, das von einem deutschen Meme kommt. „Nos“ wird als Vorsilbe („Schäre“ → „Nosre“) oder als Verb („Nos habe ich gemacht.“) verwendet."
+  },
+  {
+    "id": "jw-vaerres",
+    "term": "Värres",
+    "meaning": "Weiterentwickelung von „Verres“. Wird ungefähr wie „Nos“ benutzt, nur allein stehend, nicht in einem Satz, und ist eine Reaktion."
+  },
+  {
+    "id": "jw-dingenskirchen",
+    "term": "Dingenskirchen",
+    "meaning": "Wird wie „Dingens“ verwendet, wenn man nicht weiß, was man sagen soll."
+  },
+  {
+    "id": "jw-dingenshausen",
+    "term": "Dingenshausen",
+    "meaning": "Ähnlich wie „Dingenskirchen“, nur für örtliche Dinge."
+  },
+  {
+    "id": "jw-bitte-hallo",
+    "term": "Bitte hallo?",
+    "meaning": "Wird verwendet, um anzudeuten, dass eine Person agieren oder reagieren soll."
+  },
+  {
+    "id": "jw-jemand",
+    "term": "Jemand?",
+    "meaning": "Ähnlich wie „Bitte hallo?“, wird meistens bei Aktivitäten verwendet."
   }
 ]
