@@ -2,8 +2,10 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <!-- Zoom deaktiviert, nur scrollen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" type="image/png" href="/favicon.png">
   <title>Cucuri – Jugendwort Voting</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- gleicher Font wie Main-Seite -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap">
   <link rel="stylesheet" href="jw-style.css" />
@@ -16,10 +18,11 @@
       <span class="jw-logo-pulse">JW</span>
       <div>
         <h1 class="jw-title">Cucuri Jugendwort Voting</h1>
-        <p class="jw-subtitle">Lokale Insider‑Wörter, direkt aus deinem Chat.</p>
+        <p class="jw-subtitle">Insider‑Wörter, direkt aus deinem Chat.</p>
       </div>
     </div>
-    <a href="../index.html" class="jw-btn jw-btn-ghost">⬅ Zurück zum Chat</a>
+    <!-- Zurück-Button mit eigener Klasse für Mobile-Layout -->
+    <a href="../index.html" class="jw-btn jw-btn-ghost jw-back-btn">⬅ Zurück zum Chat</a>
   </header>
 
   <main class="jw-main">
@@ -32,7 +35,7 @@
         </div>
         <div class="jw-info-card">
           <h3>2. Vote geben</h3>
-          <p>Jedes Wort kann pro Browser nur einmal von dir gevotet werden.</p>
+          <p>Du kannst immer genau ein Jugendwort wählen und deine Stimme später ändern.</p>
         </div>
         <div class="jw-info-card">
           <h3>3. Ranking verfolgen</h3>
@@ -62,64 +65,20 @@
       <h2 class="jw-section-title">Aktuelle Jugendwörter</h2>
       <div id="jw-list" class="jw-card-grid"></div>
       <p id="jw-empty" class="jw-empty-msg jw-hidden">
-        Noch keine Wörter am Start. Füge welche im Admin‑Bereich hinzu.
+        Noch keine Wörter am Start.
       </p>
     </section>
 
     <section class="jw-section jw-section-admin">
       <div class="jw-admin-header">
-        <h2 class="jw-section-title">Admin‑Bereich (lokal)</h2>
-        <button id="jw-toggle-admin" class="jw-btn jw-btn-outline">
+        <h2 class="jw-section-title">Admin‑Bereich</h2>
+        <button id="jw-toggle-admin" class="jw-btn jw-btn-outline jw-hidden">
           Admin anzeigen
         </button>
       </div>
 
       <div id="jw-admin-panel" class="jw-admin-panel jw-hidden">
-        <div class="jw-admin-columns">
-          <form id="jw-add-form" class="jw-form">
-            <h3>Neues Jugendwort hinzufügen</h3>
-            <label class="jw-label">
-              Wort
-              <input name="term" type="text" class="jw-input" required />
-            </label>
-            <label class="jw-label">
-              Bedeutung
-              <textarea name="meaning" class="jw-input" rows="2" required></textarea>
-            </label>
-            <label class="jw-label">
-              Beispiel (optional)
-              <textarea name="example" class="jw-input" rows="2"></textarea>
-            </label>
-            <label class="jw-label">
-              Autor / Quelle (optional)
-              <input name="author" type="text" class="jw-input" />
-            </label>
-            <label class="jw-label">
-              Tags (optional, mit Komma trennen)
-              <input name="tags" type="text" class="jw-input" />
-            </label>
-            <button class="jw-btn" type="submit">Wort speichern</button>
-          </form>
-
-          <div class="jw-admin-side">
-            <h3>Daten verwalten</h3>
-            <p class="jw-admin-text">
-              Die Jugendwörter werden nur im <strong>localStorage</strong> deines Browsers gespeichert.
-            </p>
-            <div class="jw-admin-actions">
-              <button id="jw-export" class="jw-btn jw-btn-ghost">
-                JSON exportieren
-              </button>
-              <label class="jw-file-label">
-                JSON importieren
-                <input id="jw-import" type="file" accept="application/json" />
-              </label>
-              <button id="jw-clear" class="jw-btn jw-btn-danger">
-                Alles löschen (localStorage)
-              </button>
-            </div>
-          </div>
-        </div>
+        <!-- Inhalt wird komplett von jw-script.js gebaut (Overview-Tabellen) -->
       </div>
     </section>
   </main>

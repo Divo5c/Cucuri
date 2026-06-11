@@ -1,4 +1,3 @@
-// Jugendwort Voting Script – Mongo-Backend, Vote änderbar, Admin nur für eingeloggt "Divo"
 (() => {
   const listEl = document.getElementById("jw-list");
   const emptyEl = document.getElementById("jw-empty");
@@ -6,24 +5,16 @@
   const sortEl = document.getElementById("jw-sort");
   const adminToggleBtn = document.getElementById("jw-toggle-admin");
   const adminPanel = document.getElementById("jw-admin-panel");
-  const addForm = document.getElementById("jw-add-form");
-  const exportBtn = document.getElementById("jw-export");
-  const importInput = document.getElementById("jw-import");
-  const clearBtn = document.getElementById("jw-clear");
 
   let adminOverviewEl;
-
   let words = [];
-  let currentChoice = null; // aktueller Vote des Users laut Server
-  let currentUser = null;   // Username aus localStorage
+  let currentChoice = null;
+  let currentUser = null;
 
   function getCurrentUser() {
     try {
-      const u = localStorage.getItem("cucuri_username");
-      return u && u.trim() ? u.trim() : null;
-    } catch {
-      return null;
-    }
+      return localStorage.getItem("cucuri_username") || null;
+    } catch { return null; }
   }
 
   async function fetchWordsFromServer() {
@@ -39,42 +30,56 @@
       words = data.words || [];
       currentChoice = data.currentChoice || null;
     } catch (e) {
-      console.error("Fehler beim Laden der Jugendwörter:", e);
+      console.error("Fehler beim Laden:", e);
       words = [];
       currentChoice = null;
     }
   }
 
-  async function sendVoteToServer(id) {
+  async function sendVote(id) {
     currentUser = getCurrentUser();
     if (!currentUser) {
-      alert("Bitte im Chat einloggen, bevor du votest.");
+      alert("Bitte im Chat einloggen.");
       return;
     }
-
-    const url = `/api/jugendwort/vote?user=${encodeURIComponent(currentUser)}`;
-
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wordId: id })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        alert(data.error || "Fehler beim Voting.");
-        return;
-      }
-
-      currentChoice = data.choice;
-      await fetchWordsFromServer();
-      render();
-      updateAdminOverview();
-    } catch (e) {
-      console.error("Voting-Fehler:", e);
-      alert("Serverfehler beim Voting.");
+    const res = await fetch(`/api/jugendwort/vote?user=${encodeURIComponent(currentUser)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wordId: id })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Fehler beim Voting.");
+      return;
     }
+    currentChoice = data.choice;
+    await fetchWordsFromServer();
+    render();
+    updateAdminOverview();
+  }
+
+  async function removeVote() {
+    currentUser = getCurrentUser();
+    if (!currentUser) {
+      alert("Bitte im Chat einloggen.");
+      return;
+    }
+    if (!currentChoice) {
+      alert("Du hast aktuell keine Stimme.");
+      return;
+    }
+    if (!confirm("Willst du deine Stimme wirklich löschen?")) return;
+
+    const res = await fetch(`/api/jugendwort/vote?user=${encodeURIComponent(currentUser)}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || "Fehler beim Löschen.");
+      return;
+    }
+    currentChoice = null;
+    await fetchWordsFromServer();
+    render();
+    updateAdminOverview();
   }
 
   function render() {
@@ -82,28 +87,17 @@
     const sort = sortEl?.value || "votes-desc";
 
     let visible = [...words];
-
     if (search) {
-      visible = visible.filter((w) => {
-        const base = `${w.term || ""} ${w.meaning || ""}`.toLowerCase();
-        return base.includes(search);
-      });
+      visible = visible.filter(w => w.term.toLowerCase().includes(search) || w.meaning.toLowerCase().includes(search));
     }
 
     visible.sort((a, b) => {
-      if (sort === "alpha-asc") {
-        return (a.term || "").localeCompare(b.term || "");
-      }
-      if (sort === "alpha-desc") {
-        return (b.term || "").localeCompare(a.term || "");
-      }
-      const va = a.votes || 0;
-      const vb = b.votes || 0;
-      return vb - va;
+      if (sort === "alpha-asc") return a.term.localeCompare(b.term);
+      if (sort === "alpha-desc") return b.term.localeCompare(a.term);
+      return (b.votes || 0) - (a.votes || 0);
     });
 
     listEl.innerHTML = "";
-
     if (!visible.length) {
       emptyEl.classList.remove("jw-hidden");
       return;
@@ -111,101 +105,53 @@
     emptyEl.classList.add("jw-hidden");
 
     visible.forEach((w, idx) => {
-      const votes = w.votes || 0;
       const isChosen = currentChoice === w.id;
-      const rankClass =
-        idx === 0 ? "jw-rank-1" : idx === 1 ? "jw-rank-2" : idx === 2 ? "jw-rank-3" : "";
+      const btnText = isChosen ? "Gewählt (ändern)" : "Vote geben";
+      const removeBtn = isChosen ? `<button class="jw-btn jw-btn-ghost jw-remove-vote-btn">Stimme entfernen</button>` : "";
 
       const card = document.createElement("article");
-      card.className = `jw-card ${rankClass}`;
-
-      const btnText = isChosen ? "Gewählt (ändern)" : "Vote geben";
-
+      card.className = `jw-card jw-rank-${idx + 1}`;
       card.innerHTML = `
         <div class="jw-card-header">
-          <h3 class="jw-term">
-            <span class="jw-term-main">${escapeHtml(w.term || "")}</span>
-            <span class="jw-term-secondary">#${idx + 1}</span>
-          </h3>
+          <h3 class="jw-term"><span class="jw-term-main">${w.term}</span><span class="jw-term-secondary">#${idx + 1}</span></h3>
           <span class="jw-badge-rank">Rank ${idx + 1}</span>
         </div>
-        <p class="jw-meaning">${escapeHtml(w.meaning || "")}</p>
+        <p class="jw-meaning">${w.meaning}</p>
         <div class="jw-meta-row">
-          <span></span>
-          <div class="jw-tags"></div>
-        </div>
-        <div class="jw-meta-row">
-          <span class="jw-vote-count">${votes} Vote${votes === 1 ? "" : "s"}</span>
+          <span class="jw-vote-count">${w.votes} Vote${w.votes === 1 ? "" : "s"}</span>
           <div class="jw-vote-area">
-            <button
-              class="jw-btn jw-vote-btn"
-              data-id="${encodeURIComponent(w.id)}"
-            >
-              ${btnText}
-            </button>
+            <button class="jw-btn jw-vote-btn">${btnText}</button>
+            ${removeBtn}
           </div>
         </div>
       `;
 
+      card.querySelector(".jw-vote-btn").onclick = () => sendVote(w.id);
+      if (card.querySelector(".jw-remove-vote-btn")) {
+        card.querySelector(".jw-remove-vote-btn").onclick = removeVote;
+      }
       listEl.appendChild(card);
     });
-
-    listEl.querySelectorAll(".jw-vote-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = decodeURIComponent(btn.getAttribute("data-id"));
-        sendVoteToServer(id);
-      });
-    });
-  }
-
-  function escapeHtml(str) {
-    return String(str || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   }
 
   function setupEvents() {
     searchEl?.addEventListener("input", () => render());
     sortEl?.addEventListener("change", () => render());
 
-    // Admin-Toggle nur einblenden, wenn Divo eingeloggt ist
     currentUser = getCurrentUser();
     if (currentUser === "Divo") {
       adminToggleBtn?.classList.remove("jw-hidden");
       adminPanel?.classList.add("jw-hidden");
-
-      adminToggleBtn?.addEventListener("click", () => {
-        const isHidden = adminPanel.classList.contains("jw-hidden");
-        adminPanel.classList.toggle("jw-hidden", !isHidden);
-        adminToggleBtn.textContent = isHidden ? "Admin verstecken" : "Admin anzeigen";
-        if (isHidden) updateAdminOverview();
+      adminToggleBtn.addEventListener("click", () => {
+        const hidden = adminPanel.classList.contains("jw-hidden");
+        adminPanel.classList.toggle("jw-hidden", !hidden);
+        adminToggleBtn.textContent = hidden ? "Admin anzeigen" : "Admin verstecken";
+        if (hidden) updateAdminOverview();
       });
     } else {
-      // niemand anderes sieht das Admin-Panel
-      adminPanel?.classList.add("jw-hidden");
       adminToggleBtn?.classList.add("jw-hidden");
+      adminPanel?.classList.add("jw-hidden");
     }
-
-    // Admin-Form deaktiviert (Wörter kommen aus server.js)
-    addForm?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      alert("Wörter kommen aus JUGENDWORT_WORDS im server.js.");
-    });
-
-    exportBtn?.addEventListener("click", () => {
-      alert("Export ist in der Mongo-Version aktuell deaktiviert.");
-    });
-
-    importInput?.addEventListener("change", () => {
-      alert("Import ist in der Mongo-Version aktuell deaktiviert.");
-      importInput.value = "";
-    });
-
-    clearBtn?.addEventListener("click", () => {
-      alert("Löschen geht nur im Backend (Mongo), nicht im Browser.");
-    });
 
     setupAdminOverview();
   }
@@ -214,18 +160,20 @@
     adminOverviewEl = document.createElement("div");
     adminOverviewEl.className = "jw-admin-overview";
     adminOverviewEl.innerHTML = `
-      <hr style="margin: 0.8rem 0; border-color: rgba(255,255,255,0.2);" />
       <h3>Admin-Übersicht</h3>
       <p class="jw-admin-current-vote"></p>
       <div class="jw-admin-table-wrap">
+        <h4>User → Stimme</h4>
         <table class="jw-admin-table">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Gewähltes Wort</th>
-            </tr>
-          </thead>
-          <tbody class="jw-admin-tbody"></tbody>
+          <thead><tr><th>User</th><th>Gewähltes Wort</th></tr></thead>
+          <tbody class="jw-admin-tbody-users"></tbody>
+        </table>
+      </div>
+      <div class="jw-admin-table-wrap" style="margin-top:1rem;">
+        <h4>Wort → Votes</h4>
+        <table class="jw-admin-table">
+          <thead><tr><th>Wort</th><th>Votes</th></tr></thead>
+          <tbody class="jw-admin-tbody-words"></tbody>
         </table>
       </div>
     `;
@@ -234,57 +182,59 @@
 
   async function updateAdminOverview() {
     if (!adminOverviewEl) return;
-
+    const userTbody = adminOverviewEl.querySelector(".jw-admin-tbody-users");
+    const wordTbody = adminOverviewEl.querySelector(".jw-admin-tbody-words");
     const currentVoteEl = adminOverviewEl.querySelector(".jw-admin-current-vote");
-    const tbody = adminOverviewEl.querySelector(".jw-admin-tbody");
+    currentUser = getCurrentUser();
 
-    const adminUser = getCurrentUser();
-    if (adminUser !== "Divo") {
-      // Sicherheitscheck: falls jemand den Button irgendwie sichtbar macht
-      currentVoteEl.textContent = "Nur für Admin (Divo) sichtbar.";
-      tbody.innerHTML = "";
+    if (currentUser !== "Divo") {
+      currentVoteEl.textContent = "Nur für Admin sichtbar.";
+      userTbody.innerHTML = "";
+      wordTbody.innerHTML = "";
       return;
     }
 
     try {
-      const res = await fetch(`/api/jugendwort/admin?user=${encodeURIComponent(adminUser)}`);
+      const res = await fetch(`/api/jugendwort/admin?user=${encodeURIComponent(currentUser)}`);
       const data = await res.json();
       if (!res.ok) {
-        currentVoteEl.textContent = data.error || "Fehler beim Laden der Admin-Daten.";
-        tbody.innerHTML = "";
+        currentVoteEl.textContent = data.error || "Fehler bei Admin-Daten.";
+        userTbody.innerHTML = "";
+        wordTbody.innerHTML = "";
         return;
       }
 
       const users = data.users || [];
       const wordStats = data.wordStats || [];
-
-      const totalVotes = wordStats.reduce((sum, w) => sum + (w.votes || 0), 0);
+      const totalVotes = wordStats.reduce((s, w) => s + (w.votes || 0), 0);
       currentVoteEl.textContent = `Gesamtvotes: ${totalVotes} – User mit Vote: ${users.filter(u => u.jugendwortChoice).length}`;
 
-      tbody.innerHTML = "";
-      users.forEach((u) => {
+      userTbody.innerHTML = "";
+      users.forEach(u => {
         const chosen = words.find(w => w.id === u.jugendwortChoice);
         const label = chosen ? chosen.term : (u.jugendwortChoice || "-");
-
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${escapeHtml(u.username)}</td>
-          <td>${escapeHtml(label)}</td>
-        `;
-        tbody.appendChild(tr);
+        tr.innerHTML = `<td>${u.username}</td><td>${label}</td>`;
+        userTbody.appendChild(tr);
+      });
+
+      wordTbody.innerHTML = "";
+      wordStats.sort((a, b) => (b.votes || 0) - (a.votes || 0)).forEach(w => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${w.term}</td><td>${w.votes}</td>`;
+        wordTbody.appendChild(tr);
       });
     } catch (e) {
-      console.error("Admin-Daten Fehler:", e);
-      currentVoteEl.textContent = "Fehler beim Laden der Admin-Daten.";
-      tbody.innerHTML = "";
+      console.error("Admin Daten Fehler:", e);
+      currentVoteEl.textContent = "Fehler beim Laden.";
+      userTbody.innerHTML = "";
+      wordTbody.innerHTML = "";
     }
   }
 
-  // Init
   (async () => {
     await fetchWordsFromServer();
     setupEvents();
     render();
-    // Admin-Overview wird beim Öffnen des Panels geholt
   })();
 })();
