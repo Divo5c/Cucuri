@@ -104,17 +104,30 @@
     }
     emptyEl.classList.add("jw-hidden");
 
-    visible.forEach((w, idx) => {
+    // Frontend-Rank (nur Anzeige im Karten-UI)
+    let currentRank = 0;
+    let lastVotes = null;
+
+    visible.forEach((w) => {
+      if (w.votes !== lastVotes) {
+        currentRank += 1;
+        lastVotes = w.votes;
+      }
+      const rankLabel = currentRank;
+
       const isChosen = currentChoice === w.id;
       const btnText = isChosen ? "Gewählt (ändern)" : "Vote geben";
       const removeBtn = isChosen ? `<button class="jw-btn jw-btn-ghost jw-remove-vote-btn">Stimme entfernen</button>` : "";
 
       const card = document.createElement("article");
-      card.className = `jw-card jw-rank-${idx + 1}`;
+      card.className = `jw-card jw-rank-${rankLabel}`;
       card.innerHTML = `
         <div class="jw-card-header">
-          <h3 class="jw-term"><span class="jw-term-main">${w.term}</span><span class="jw-term-secondary">#${idx + 1}</span></h3>
-          <span class="jw-badge-rank">Rank ${idx + 1}</span>
+          <h3 class="jw-term">
+            <span class="jw-term-main">${w.term}</span>
+            <span class="jw-term-secondary">#${rankLabel}</span>
+          </h3>
+          <span class="jw-badge-rank">Rank ${rankLabel}</span>
         </div>
         <p class="jw-meaning">${w.meaning}</p>
         <div class="jw-meta-row">
@@ -170,14 +183,30 @@
         </table>
       </div>
       <div class="jw-admin-table-wrap" style="margin-top:1rem;">
-        <h4>Wort → Votes</h4>
+        <h4>Wort → Votes & Rank</h4>
         <table class="jw-admin-table">
-          <thead><tr><th>Wort</th><th>Votes</th></tr></thead>
+          <thead><tr><th>Platz</th><th>Wort</th><th>Votes</th></tr></thead>
           <tbody class="jw-admin-tbody-words"></tbody>
         </table>
       </div>
     `;
     adminPanel.appendChild(adminOverviewEl);
+  }
+
+  // DENSE RANK für Admin-Tabelle
+  function buildRankedWords(wordStats) {
+    const sorted = [...wordStats].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    let currentRank = 0;
+    let lastVotes = null;
+
+    return sorted.map(w => {
+      const v = w.votes || 0;
+      if (v !== lastVotes) {
+        currentRank += 1;
+        lastVotes = v;
+      }
+      return { ...w, rank: currentRank };
+    });
   }
 
   async function updateAdminOverview() {
@@ -209,6 +238,7 @@
       const totalVotes = wordStats.reduce((s, w) => s + (w.votes || 0), 0);
       currentVoteEl.textContent = `Gesamtvotes: ${totalVotes} – User mit Vote: ${users.filter(u => u.jugendwortChoice).length}`;
 
+      // User-Tabelle
       userTbody.innerHTML = "";
       users.forEach(u => {
         const chosen = words.find(w => w.id === u.jugendwortChoice);
@@ -218,10 +248,12 @@
         userTbody.appendChild(tr);
       });
 
+      // Wort-Tabelle mit Rank
+      const ranked = buildRankedWords(wordStats);
       wordTbody.innerHTML = "";
-      wordStats.sort((a, b) => (b.votes || 0) - (a.votes || 0)).forEach(w => {
+      ranked.forEach(w => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${w.term}</td><td>${w.votes}</td>`;
+        tr.innerHTML = `<td>${w.rank}</td><td>${w.term}</td><td>${w.votes}</td>`;
         wordTbody.appendChild(tr);
       });
     } catch (e) {
