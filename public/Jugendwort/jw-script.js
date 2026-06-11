@@ -1,4 +1,4 @@
-// Jugendwort Voting Script – Mongo-Backend, Vote änderbar, Admin-View für "Divo"
+// Jugendwort Voting Script – Mongo-Backend, Vote änderbar, Admin nur für eingeloggt "Divo"
 (() => {
   const listEl = document.getElementById("jw-list");
   const emptyEl = document.getElementById("jw-empty");
@@ -12,11 +12,9 @@
   const clearBtn = document.getElementById("jw-clear");
 
   let adminOverviewEl;
-  let adminLoginInput;
-  let adminLoginBtn;
 
   let words = [];
-  let currentChoice = null; // was der User laut Server gewählt hat
+  let currentChoice = null; // aktueller Vote des Users laut Server
   let currentUser = null;   // Username aus localStorage
 
   function getCurrentUser() {
@@ -172,16 +170,28 @@
     searchEl?.addEventListener("input", () => render());
     sortEl?.addEventListener("change", () => render());
 
-    adminToggleBtn?.addEventListener("click", () => {
-      const isHidden = adminPanel.classList.contains("jw-hidden");
-      adminPanel.classList.toggle("jw-hidden", !isHidden);
-      adminToggleBtn.textContent = isHidden ? "Admin verstecken" : "Admin anzeigen";
-    });
+    // Admin-Toggle nur einblenden, wenn Divo eingeloggt ist
+    currentUser = getCurrentUser();
+    if (currentUser === "Divo") {
+      adminToggleBtn?.classList.remove("jw-hidden");
+      adminPanel?.classList.add("jw-hidden");
 
-    // Admin-Form-Deaktivierung
+      adminToggleBtn?.addEventListener("click", () => {
+        const isHidden = adminPanel.classList.contains("jw-hidden");
+        adminPanel.classList.toggle("jw-hidden", !isHidden);
+        adminToggleBtn.textContent = isHidden ? "Admin verstecken" : "Admin anzeigen";
+        if (isHidden) updateAdminOverview();
+      });
+    } else {
+      // niemand anderes sieht das Admin-Panel
+      adminPanel?.classList.add("jw-hidden");
+      adminToggleBtn?.classList.add("jw-hidden");
+    }
+
+    // Admin-Form deaktiviert (Wörter kommen aus server.js)
     addForm?.addEventListener("submit", (e) => {
       e.preventDefault();
-      alert("Wörter kommen aktuell vom Server-Code (JUGENDWORT_WORDS im server.js).");
+      alert("Wörter kommen aus JUGENDWORT_WORDS im server.js.");
     });
 
     exportBtn?.addEventListener("click", () => {
@@ -200,59 +210,37 @@
     setupAdminOverview();
   }
 
-  // Admin-Übersicht nur für "Divo"
   function setupAdminOverview() {
     adminOverviewEl = document.createElement("div");
-    adminOverviewEl.className = "jw-admin-overview jw-hidden";
+    adminOverviewEl.className = "jw-admin-overview";
     adminOverviewEl.innerHTML = `
       <hr style="margin: 0.8rem 0; border-color: rgba(255,255,255,0.2);" />
       <h3>Admin-Übersicht</h3>
-      <div class="jw-admin-login">
-        <input type="text" class="jw-input" placeholder="Admin-Name eingeben">
-        <button class="jw-btn jw-btn-ghost jw-admin-login-btn">Login</button>
-      </div>
-      <div class="jw-admin-data jw-hidden">
-        <p class="jw-admin-current-vote"></p>
-        <div class="jw-admin-table-wrap">
-          <table class="jw-admin-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Wort-ID</th>
-              </tr>
-            </thead>
-            <tbody class="jw-admin-tbody"></tbody>
-          </table>
-        </div>
+      <p class="jw-admin-current-vote"></p>
+      <div class="jw-admin-table-wrap">
+        <table class="jw-admin-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Gewähltes Wort</th>
+            </tr>
+          </thead>
+          <tbody class="jw-admin-tbody"></tbody>
+        </table>
       </div>
     `;
     adminPanel.appendChild(adminOverviewEl);
-
-    adminLoginInput = adminOverviewEl.querySelector(".jw-admin-login input");
-    adminLoginBtn = adminOverviewEl.querySelector(".jw-admin-login-btn");
-
-    adminLoginBtn.addEventListener("click", () => {
-      const name = (adminLoginInput.value || "").trim();
-      if (name === "Divo") {
-        adminOverviewEl.querySelector(".jw-admin-data").classList.remove("jw-hidden");
-        adminOverviewEl.querySelector(".jw-admin-login").classList.add("jw-hidden");
-        updateAdminOverview();
-      } else {
-        alert("Falscher Admin-Name.");
-      }
-    });
   }
 
   async function updateAdminOverview() {
     if (!adminOverviewEl) return;
-    const dataEl = adminOverviewEl.querySelector(".jw-admin-data");
-    if (dataEl.classList.contains("jw-hidden")) return;
 
     const currentVoteEl = adminOverviewEl.querySelector(".jw-admin-current-vote");
     const tbody = adminOverviewEl.querySelector(".jw-admin-tbody");
 
     const adminUser = getCurrentUser();
     if (adminUser !== "Divo") {
+      // Sicherheitscheck: falls jemand den Button irgendwie sichtbar macht
       currentVoteEl.textContent = "Nur für Admin (Divo) sichtbar.";
       tbody.innerHTML = "";
       return;
@@ -271,14 +259,17 @@
       const wordStats = data.wordStats || [];
 
       const totalVotes = wordStats.reduce((sum, w) => sum + (w.votes || 0), 0);
-      currentVoteEl.textContent = `Gesamtvotes: ${totalVotes} – Einträge: ${users.length}`;
+      currentVoteEl.textContent = `Gesamtvotes: ${totalVotes} – User mit Vote: ${users.filter(u => u.jugendwortChoice).length}`;
 
       tbody.innerHTML = "";
       users.forEach((u) => {
+        const chosen = words.find(w => w.id === u.jugendwortChoice);
+        const label = chosen ? chosen.term : (u.jugendwortChoice || "-");
+
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${escapeHtml(u.username)}</td>
-          <td>${u.jugendwortChoice || "-"}</td>
+          <td>${escapeHtml(label)}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -294,6 +285,6 @@
     await fetchWordsFromServer();
     setupEvents();
     render();
-    updateAdminOverview();
+    // Admin-Overview wird beim Öffnen des Panels geholt
   })();
 })();
