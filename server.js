@@ -33,7 +33,8 @@ if (!MONGO_URI) {
 // ==========================================
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  jugendwortChoice: { type: String, default: null } // NEU: gewähltes Jugendwort
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
@@ -68,13 +69,119 @@ async function broadcastUserList() {
 }
 
 // ==========================================
+// MIDDLEWARE: Username für HTTP-Requests
+// ==========================================
+// Wir nutzen später ?user=<username> in der URL, um zu wissen, wer votet.
+app.use((req, res, next) => {
+  const u = req.query.user;
+  req.currentUsername = u || null;
+  next();
+});
+
+// ==========================================
+// JUGENDWORT VOTING API
+// ==========================================
+
+// Basis-Liste der Jugendwörter (IDs musst du auch im Frontend nutzen)
+const JUGENDWORT_WORDS = [
+  {
+    id: 'start-1',
+    term: 'das crazy',
+    meaning: 'Wenn etwas komplett verrückt oder unfassbar ist.'
+  },
+  {
+    id: 'start-2',
+    term: 'lowkey nice',
+    meaning: 'Etwas ist heimlich gut, aber man spielt es runter.'
+  }
+  // weitere Wörter kannst du hier ergänzen
+];
+
+// GET: Votes + aktuelle Wahl des Users
+app.get('/api/jugendwort/votes', async (req, res) => {
+  try {
+    const currentUsername = req.currentUsername;
+
+    // Alle User mit Choice holen
+    const users = await User.find(
+      { jugendwortChoice: { $ne: null } },
+      'jugendwortChoice username'
+    );
+
+    const counts = {};
+    users.forEach(u => {
+      counts[u.jugendwortChoice] = (counts[u.jugendwortChoice] || 0) + 1;
+    });
+
+    let currentChoice = null;
+    if (currentUsername) {
+      const me = await User.findOne(
+        { username: currentUsername },
+        'jugendwortChoice'
+      );
+      if (me) currentChoice = me.jugendwortChoice;
+    }
+
+    const result = JUGENDWORT_WORDS.map(w => ({
+      ...w,
+      votes: counts[w.id] || 0
+    }));
+
+    res.json({
+      words: result,
+      currentChoice
+    });
+  } catch (err) {
+    console.error('Fehler bei /api/jugendwort/votes:', err.message);
+    res.status(500).json({ error: 'Serverfehler beim Laden der Votes.' });
+  }
+});
+
+// POST: Abstimmen (nur 1x pro User)
+app.post('/api/jugendwort/vote', async (req, res) => {
+  try {
+    const currentUsername = req.currentUsername;
+    if (!currentUsername) {
+      return res.status(401).json({ error: 'Nicht eingeloggt (user fehlt).' });
+    }
+
+    const { wordId } = req.body;
+    if (!wordId) {
+      return res.status(400).json({ error: 'wordId fehlt.' });
+    }
+
+    // Existiert das Wort überhaupt in der Liste?
+    const exists = JUGENDWORT_WORDS.some(w => w.id === wordId);
+    if (!exists) {
+      return res.status(400).json({ error: 'Unbekanntes Jugendwort.' });
+    }
+
+    const user = await User.findOne({ username: currentUsername });
+    if (!user) {
+      return res.status(404).json({ error: 'User nicht gefunden.' });
+    }
+
+    if (user.jugendwortChoice) {
+      return res.status(400).json({ error: 'Du hast bereits abgestimmt.' });
+    }
+
+    user.jugendwortChoice = wordId;
+    await user.save();
+
+    res.json({ success: true, choice: wordId });
+  } catch (err) {
+    console.error('Fehler bei /api/jugendwort/vote:', err.message);
+    res.status(500).json({ error: 'Serverfehler beim Voting.' });
+  }
+});
+
+// ==========================================
 // SOCKET.IO LOGIK
 // ==========================================
 io.on('connection', (socket) => {
   
   // REGISTRIEREN
   socket.on('register', async (data) => {
-    // Neu: Erklärende Fehlermeldung, wenn die Verbindung gerade noch aufgebaut wird
     if (mongoose.connection.readyState !== 1) {
       return socket.emit('registerError', 'Verbindung zur Datenbank wird aufgebaut... Bitte in 5 Sekunden nochmal versuchen.');
     }
@@ -102,7 +209,6 @@ io.on('connection', (socket) => {
 
   // EINLOGGEN
   socket.on('login', async (data) => {
-    // Neu: Erklärende Fehlermeldung, wenn die Verbindung gerade noch aufgebaut wird
     if (mongoose.connection.readyState !== 1) {
       return socket.emit('loginError', 'Verbindung zur Datenbank wird aufgebaut... Bitte in 5 Sekunden nochmal versuchen.');
     }

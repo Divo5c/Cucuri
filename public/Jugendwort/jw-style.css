@@ -494,3 +494,39 @@
   50% { transform: scale(1.06); box-shadow: 0 0 18px rgba(0,255,136,1), 0 24px 45px rgba(0,0,0,1); }
   100% { transform: scale(1); box-shadow: 0 0 12px rgba(0,255,136,0.7), 0 18px 35px rgba(0,0,0,0.9); }
 }
+
+.jw-admin-overview h3 {
+  margin-top: 0.6rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--jw-gold);
+}
+
+.jw-admin-login {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.jw-admin-login .jw-input {
+  flex: 1;
+}
+
+.jw-admin-table-wrap {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+.jw-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.jw-admin-table th,
+.jw-admin-table td {
+  padding: 0.25rem 0.35rem;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  text-align: left;
+}

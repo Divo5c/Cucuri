@@ -107,6 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   socket.on('loginSuccess', (username) => {
+    // NEU: Username im Browser speichern für Jugendwort-Seite
+    try {
+      localStorage.setItem('cucuri_username', username);
+    } catch {}
+
     if (authModal) authModal.classList.remove('active');
     if (chatContainer) {
       chatContainer.classList.remove('hidden');
