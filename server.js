@@ -64,10 +64,8 @@ app.use((req, res, next) => {
 });
 
 // ===== Jugendwort Voting API =====
-const JUGENDWORT_WORDS = [
-  { id: 'start-1', term: 'das crazy', meaning: 'Wenn etwas komplett verrückt oder unfassbar ist.' },
-  { id: 'start-2', term: 'lowkey nice', meaning: 'Etwas ist heimlich gut, aber man spielt es runter.' }
-];
+// Neue Liste aus jw-data.json laden
+const JUGENDWORT_WORDS = require('./public/Jugendwort/jw-data.json');
 
 app.get('/api/jugendwort/votes', async (req, res) => {
   try {
