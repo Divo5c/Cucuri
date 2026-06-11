@@ -19,8 +19,6 @@ if (!MONGO_URI) {
   mongoose.connect(MONGO_URI)
     .then(() => {
       console.log('✅ Erfolgreich mit MongoDB verbunden!');
-      // NEU: Beim Start alle User laden und als offline zählen
-      return initOnlineUsers();
     })
     .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err.message));
 }
@@ -40,30 +38,19 @@ const messageSchema = new mongoose.Schema({
 });
 const Message = mongoose.models.Message || mongoose.model('Message', messageSchema);
 
+// Merkt, welcher Socket zu welchem User gehört
 const sessions = new Map();
-const onlineUsers = new Set();
-// Verbindungszähler pro User
-const userConnectionCounts = new Map();
 
-// NEU: Beim Serverstart alle User laden
-async function initOnlineUsers() {
-  try {
-    const allUsers = await User.find({}, 'username');
-    const allUsernames = allUsers.map(u => u.username);
-    console.log('ℹ Geladene User beim Start:', allUsernames.join(', '));
-    // onlineUsers bleibt leer, aber broadcastUserList wird aufgerufen
-    broadcastUserList();
-  } catch (err) {
-    console.error('Fehler beim Initialisieren der User-Liste:', err.message);
-  }
-}
-
+// Lobby-Liste immer aus Sessions + DB bauen
 async function broadcastUserList() {
   try {
     const allUsers = await User.find({}, 'username');
     const allUsernames = allUsers.map(u => u.username);
-    const onlineArray = Array.from(onlineUsers);
-    const offlineArray = allUsernames.filter(u => !onlineArray.includes(u));
+
+    const onlineSet = new Set(sessions.values());
+    const onlineArray = Array.from(onlineSet);
+    const offlineArray = allUsernames.filter(u => !onlineSet.has(u));
+
     io.emit('updateUserList', { online: onlineArray, offline: offlineArray });
   } catch (err) {
     console.error("Fehler beim Laden der User-Liste:", err.message);
@@ -214,22 +201,16 @@ io.on('connection', (socket) => {
       if (!user) return socket.emit('loginError', 'Falsche Daten oder Account existiert nicht!');
       if (user.isBanned) return socket.emit('loginError', 'Du wurdest gebannt.');
 
-      // Session & Verbindungszähler
+      // Session merken
       sessions.set(socket.id, username);
-      const prevCount = userConnectionCounts.get(username) || 0;
-      userConnectionCounts.set(username, prevCount + 1);
-
-      // Nur beim ersten Socket dieses Users: als online zählen + Join-Meldung
-      if (prevCount === 0) {
-        onlineUsers.add(username);
-        socket.broadcast.emit('userJoined', username);
-        broadcastUserList();
-      }
 
       socket.emit('loginSuccess', username);
 
       const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
       socket.emit('loadHistory', chatHistory.reverse());
+
+      socket.broadcast.emit('userJoined', username);
+      broadcastUserList();
     } catch (err) {
       console.error('Login Fehler:', err.message);
       socket.emit('loginError', 'Datenbank-Fehler beim Login.');
@@ -343,24 +324,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Disconnect nur beim letzten Socket des Users
+  // Disconnect: Session löschen und Lobby neu senden
   socket.on('disconnect', () => {
     const username = sessions.get(socket.id);
     if (!username) return;
 
     sessions.delete(socket.id);
-
-    const prevCount = userConnectionCounts.get(username) || 0;
-    const newCount = Math.max(prevCount - 1, 0);
-
-    if (newCount === 0) {
-      userConnectionCounts.delete(username);
-      onlineUsers.delete(username);
-      socket.broadcast.emit('userLeft', username);
-      broadcastUserList();
-    } else {
-      userConnectionCounts.set(username, newCount);
-    }
+    socket.broadcast.emit('userLeft', username);
+    broadcastUserList();
   });
 });
 
