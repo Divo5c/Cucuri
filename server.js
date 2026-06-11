@@ -38,6 +38,8 @@ const Message = mongoose.models.Message || mongoose.model('Message', messageSche
 
 const sessions = new Map();
 const onlineUsers = new Set();
+// NEU: Verbindungszähler pro User
+const userConnectionCounts = new Map();
 
 async function broadcastUserList() {
   try {
@@ -195,15 +197,22 @@ io.on('connection', (socket) => {
       if (!user) return socket.emit('loginError', 'Falsche Daten oder Account existiert nicht!');
       if (user.isBanned) return socket.emit('loginError', 'Du wurdest gebannt.');
 
+      // Session & Verbindungszähler
       sessions.set(socket.id, username);
-      onlineUsers.add(username);
+      const prevCount = userConnectionCounts.get(username) || 0;
+      userConnectionCounts.set(username, prevCount + 1);
+
+      // Nur beim ersten Socket dieses Users: als online zählen + Join-Meldung
+      if (prevCount === 0) {
+        onlineUsers.add(username);
+        socket.broadcast.emit('userJoined', username);
+        broadcastUserList();
+      }
+
       socket.emit('loginSuccess', username);
 
       const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
       socket.emit('loadHistory', chatHistory.reverse());
-
-      socket.broadcast.emit('userJoined', username);
-      broadcastUserList();
     } catch (err) {
       console.error('Login Fehler:', err.message);
       socket.emit('loginError', 'Datenbank-Fehler beim Login.');
@@ -317,13 +326,23 @@ io.on('connection', (socket) => {
     }
   });
 
+  // NEU: Disconnect nur beim letzten Socket des Users
   socket.on('disconnect', () => {
     const username = sessions.get(socket.id);
-    if (username) {
-      sessions.delete(socket.id);
+    if (!username) return;
+
+    sessions.delete(socket.id);
+
+    const prevCount = userConnectionCounts.get(username) || 0;
+    const newCount = Math.max(prevCount - 1, 0);
+
+    if (newCount === 0) {
+      userConnectionCounts.delete(username);
       onlineUsers.delete(username);
       socket.broadcast.emit('userLeft', username);
       broadcastUserList();
+    } else {
+      userConnectionCounts.set(username, newCount);
     }
   });
 });
