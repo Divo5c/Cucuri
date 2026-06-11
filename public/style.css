@@ -179,6 +179,13 @@ html, body {
 .guessr { background: #8A2BE2; border-color: #9370DB; }
 .meinspiel { background: #FF1493; border-color: #FF69B4; }  /* NEU - Pink */
 
+/* NEU: nur Styling für den Jugendwort-Button */
+.jugendwort {
+  background: #FFD700;
+  border-color: #00FF88;
+  color: black;
+}
+
 /* =========================================
    📱 MOBILE RESPONSIVE DESIGN 
    ========================================= */

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "start-1",
+    "term": "das crazy",
+    "meaning": "Wird gesagt, wenn etwas komplett absurd/unfassbar ist.",
+    "example": "Bruder, dein Aim war das crazy.",
+    "author": "Lokale Crew",
+    "date": "2025-10-17T00:00:00.000Z",
+    "tags": ["top", "klassiker"],
+    "votes": 5
+  },
+  {
+    "id": "start-2",
+    "term": "lowkey nice",
+    "meaning": "Etwas ist heimlich gut, aber man spielt es runter.",
+    "example": "Das neue Map-Design ist lowkey nice.",
+    "author": "Discord-Chat",
+    "date": "2025-08-11T00:00:00.000Z",
+    "tags": ["gaming"],
+    "votes": 2
+  }
+]
