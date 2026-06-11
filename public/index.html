@@ -9,6 +9,12 @@
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+  <header class="chat-header">
+    <h1 class="chat-title">Cucuri Chat</h1>
+    <div class="chat-header-actions">
+      <button id="adminToggle" class="admin-btn hidden">Admin</button>
+    </div>
+  </header>
 
   <div id="authModal" class="modal active">
     <div class="modal-content">
@@ -31,7 +37,6 @@
         <p id="registerError" class="error"></p>
         <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
       </div>
-      
     </div>
   </div>
 
@@ -49,6 +54,34 @@
     </div>
   </div>
 
+  <div id="adminPanel" class="admin-panel hidden">
+    <div class="admin-panel-content">
+      <h2>Admin‑Panel</h2>
+      <p class="admin-info">Angemeldet als Admin: <span id="adminName"></span></p>
+
+      <section class="admin-section">
+        <h3>User‑Verwaltung</h3>
+        <div class="admin-row">
+          <input type="text" id="banUsername" placeholder="Username bannen/entbannen">
+          <button id="banBtn">Bann umschalten</button>
+        </div>
+        <div class="admin-row">
+          <input type="text" id="oldName" placeholder="Alter Name">
+          <input type="text" id="newName" placeholder="Neuer Name">
+          <button id="renameBtn">Namen ändern</button>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h3>Chat‑Verwaltung</h3>
+        <div class="admin-row">
+          <button id="clearChatBtn" class="danger">Gesamten Chat löschen</button>
+        </div>
+        <p class="admin-hint">Einzelne Nachrichten: als Admin auf Nachricht tippen → löschen.</p>
+      </section>
+    </div>
+  </div>
+
   <div id="gamesMenu" class="games-menu">
     <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
     <div class="games-list">
@@ -57,7 +90,6 @@
       <a href="https://agar.io/" target="_blank" class="game-btn agario">Agar.io</a>
       <a href="https://openguessr.com/multiplayer" target="_blank" class="game-btn guessr">OpenGuessr</a>
       <a href="/spiel.html" target="_blank" class="game-btn meinspiel">🎮 Mein Spiel</a>
-      <!-- NEU: nur dieser zusätzliche Button -->
       <a href="/Jugendwort/index.html" target="_blank" class="game-btn jugendwort">🗳 Jugendwort Voting</a>
     </div>
   </div>

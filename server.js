@@ -24,6 +24,7 @@ if (!MONGO_URI) {
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  isBanned: { type: Boolean, default: false },
   jugendwortChoice: { type: String, default: null }
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
@@ -50,11 +51,13 @@ async function broadcastUserList() {
   }
 }
 
+// Middleware für HTTP-User (Jugendwort-Seite)
 app.use((req, res, next) => {
   req.currentUsername = req.query.user || null;
   next();
 });
 
+// ===== Jugendwort Voting API =====
 const JUGENDWORT_WORDS = [
   { id: 'start-1', term: 'das crazy', meaning: 'Wenn etwas komplett verrückt oder unfassbar ist.' },
   { id: 'start-2', term: 'lowkey nice', meaning: 'Etwas ist heimlich gut, aber man spielt es runter.' }
@@ -65,7 +68,9 @@ app.get('/api/jugendwort/votes', async (req, res) => {
     const currentUsername = req.currentUsername;
     const users = await User.find({ jugendwortChoice: { $ne: null } }, 'jugendwortChoice username');
     const counts = {};
-    users.forEach(u => counts[u.jugendwortChoice] = (counts[u.jugendwortChoice] || 0) + 1);
+    users.forEach(u => {
+      counts[u.jugendwortChoice] = (counts[u.jugendwortChoice] || 0) + 1;
+    });
 
     let currentChoice = null;
     if (currentUsername) {
@@ -73,7 +78,11 @@ app.get('/api/jugendwort/votes', async (req, res) => {
       if (me) currentChoice = me.jugendwortChoice;
     }
 
-    const result = JUGENDWORT_WORDS.map(w => ({ ...w, votes: counts[w.id] || 0 }));
+    const result = JUGENDWORT_WORDS.map(w => ({
+      ...w,
+      votes: counts[w.id] || 0
+    }));
+
     res.json({ words: result, currentChoice });
   } catch (err) {
     console.error('Fehler bei /api/jugendwort/votes:', err.message);
@@ -85,14 +94,19 @@ app.post('/api/jugendwort/vote', async (req, res) => {
   try {
     const currentUsername = req.currentUsername;
     if (!currentUsername) return res.status(401).json({ error: 'Nicht eingeloggt.' });
+
     const { wordId } = req.body;
     if (!wordId) return res.status(400).json({ error: 'wordId fehlt.' });
-    if (!JUGENDWORT_WORDS.some(w => w.id === wordId)) return res.status(400).json({ error: 'Unbekanntes Jugendwort.' });
+
+    const exists = JUGENDWORT_WORDS.some(w => w.id === wordId);
+    if (!exists) return res.status(400).json({ error: 'Unbekanntes Jugendwort.' });
 
     const user = await User.findOne({ username: currentUsername });
     if (!user) return res.status(404).json({ error: 'User nicht gefunden.' });
+
     user.jugendwortChoice = wordId;
     await user.save();
+
     res.json({ success: true, choice: wordId });
   } catch (err) {
     console.error('Fehler bei POST /api/jugendwort/vote:', err.message);
@@ -104,10 +118,13 @@ app.delete('/api/jugendwort/vote', async (req, res) => {
   try {
     const currentUsername = req.currentUsername;
     if (!currentUsername) return res.status(401).json({ error: 'Nicht eingeloggt.' });
+
     const user = await User.findOne({ username: currentUsername });
     if (!user) return res.status(404).json({ error: 'User nicht gefunden.' });
+
     user.jugendwortChoice = undefined;
     await user.save();
+
     res.json({ success: true });
   } catch (err) {
     console.error('Fehler bei DELETE /api/jugendwort/vote:', err.message);
@@ -117,14 +134,23 @@ app.delete('/api/jugendwort/vote', async (req, res) => {
 
 app.get('/api/jugendwort/admin', async (req, res) => {
   try {
-    if (req.currentUsername !== 'Divo') return res.status(403).json({ error: 'Kein Admin.' });
+    if (req.currentUsername !== 'Divo') {
+      return res.status(403).json({ error: 'Kein Admin.' });
+    }
+
     const users = await User.find({}, 'username jugendwortChoice');
     const counts = {};
     users.forEach(u => {
       if (!u.jugendwortChoice) return;
       counts[u.jugendwortChoice] = (counts[u.jugendwortChoice] || 0) + 1;
     });
-    const wordStats = JUGENDWORT_WORDS.map(w => ({ id: w.id, term: w.term, votes: counts[w.id] || 0 }));
+
+    const wordStats = JUGENDWORT_WORDS.map(w => ({
+      id: w.id,
+      term: w.term,
+      votes: counts[w.id] || 0
+    }));
+
     res.json({ users, wordStats });
   } catch (err) {
     console.error('Fehler bei /api/jugendwort/admin:', err.message);
@@ -132,16 +158,24 @@ app.get('/api/jugendwort/admin', async (req, res) => {
   }
 });
 
+// ===== Socket.IO Chat + Admin =====
 io.on('connection', (socket) => {
   socket.on('register', async (data) => {
-    if (mongoose.connection.readyState !== 1) return socket.emit('registerError', 'Verbindung zur Datenbank wird aufgebaut...');
+    if (mongoose.connection.readyState !== 1) {
+      return socket.emit('registerError', 'Verbindung zur Datenbank wird aufgebaut... Bitte kurz warten.');
+    }
+
     const { username, password } = data;
-    if (username.length < 3) return socket.emit('registerError', 'Min. 3 Zeichen erforderlich');
+    if (!username || !password) return socket.emit('registerError', 'Bitte alles ausfüllen.');
+    if (username.length < 3) return socket.emit('registerError', 'Min. 3 Zeichen.');
+
     try {
       const existingUser = await User.findOne({ username });
-      if (existingUser) return socket.emit('registerError', 'Username existiert bereits');
+      if (existingUser) return socket.emit('registerError', 'Username existiert bereits.');
+
       const newUser = new User({ username, password });
       await newUser.save();
+
       socket.emit('registerSuccess');
       broadcastUserList();
     } catch (err) {
@@ -151,21 +185,25 @@ io.on('connection', (socket) => {
   });
 
   socket.on('login', async (data) => {
-    if (mongoose.connection.readyState !== 1) return socket.emit('loginError', 'Verbindung zur Datenbank wird aufgebaut...');
+    if (mongoose.connection.readyState !== 1) {
+      return socket.emit('loginError', 'Verbindung zur Datenbank wird aufgebaut... Bitte kurz warten.');
+    }
+
     const { username, password } = data;
     try {
       const user = await User.findOne({ username, password });
-      if (user) {
-        sessions.set(socket.id, username);
-        onlineUsers.add(username);
-        socket.emit('loginSuccess', username);
-        const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
-        socket.emit('loadHistory', chatHistory.reverse());
-        socket.broadcast.emit('userJoined', username);
-        broadcastUserList();
-      } else {
-        socket.emit('loginError', 'Falsche Daten oder Account existiert nicht!');
-      }
+      if (!user) return socket.emit('loginError', 'Falsche Daten oder Account existiert nicht!');
+      if (user.isBanned) return socket.emit('loginError', 'Du wurdest gebannt.');
+
+      sessions.set(socket.id, username);
+      onlineUsers.add(username);
+      socket.emit('loginSuccess', username);
+
+      const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
+      socket.emit('loadHistory', chatHistory.reverse());
+
+      socket.broadcast.emit('userJoined', username);
+      broadcastUserList();
     } catch (err) {
       console.error('Login Fehler:', err.message);
       socket.emit('loginError', 'Datenbank-Fehler beim Login.');
@@ -174,21 +212,108 @@ io.on('connection', (socket) => {
 
   socket.on('chatMessage', async (msg) => {
     const username = sessions.get(socket.id);
-    if (username) {
-      const timestamp = new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'});
+    if (!username) return;
+
+    try {
+      const user = await User.findOne({ username }, 'isBanned');
+      if (!user || user.isBanned) return;
+
+      const timestamp = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
       const messageData = { username, msg, timestamp };
-      try {
-        const newMsg = new Message(messageData);
-        await newMsg.save();
-        io.emit('chatMessage', messageData);
-        const count = await Message.countDocuments();
-        if (count > 100) {
-          const oldestMsg = await Message.findOne().sort({ _id: 1 });
-          if (oldestMsg) await Message.findByIdAndDelete(oldestMsg._id);
-        }
-      } catch (err) {
-        console.error("Fehler beim Speichern der Nachricht:", err.message);
+
+      const newMsg = new Message(messageData);
+      await newMsg.save();
+
+      io.emit('chatMessage', { ...messageData, _id: newMsg._id.toString() });
+
+      const count = await Message.countDocuments();
+      if (count > 100) {
+        const oldestMsg = await Message.findOne().sort({ _id: 1 });
+        if (oldestMsg) await Message.findByIdAndDelete(oldestMsg._id);
       }
+    } catch (err) {
+      console.error('Fehler beim Speichern der Nachricht:', err.message);
+    }
+  });
+
+  // ===== Admin Events =====
+  socket.on('adminToggleBan', async ({ username }) => {
+    const caller = sessions.get(socket.id);
+    if (caller !== 'Divo') return;
+
+    try {
+      const user = await User.findOne({ username });
+      if (!user) {
+        return socket.emit('adminActionResult', { ok: false, message: 'User nicht gefunden.' });
+      }
+
+      user.isBanned = !user.isBanned;
+      await user.save();
+
+      socket.emit('adminActionResult', {
+        ok: true,
+        message: `Bann für ${username}: ${user.isBanned ? 'aktiv' : 'inaktiv'}.`
+      });
+    } catch (err) {
+      console.error('adminToggleBan Fehler:', err.message);
+      socket.emit('adminActionResult', { ok: false, message: 'Fehler beim Bann.' });
+    }
+  });
+
+  socket.on('adminRenameUser', async ({ oldName, newName }) => {
+    const caller = sessions.get(socket.id);
+    if (caller !== 'Divo') return;
+
+    try {
+      const user = await User.findOne({ username: oldName });
+      if (!user) {
+        return socket.emit('adminActionResult', { ok: false, message: 'User nicht gefunden.' });
+      }
+
+      user.username = newName;
+      await user.save();
+
+      socket.emit('adminActionResult', {
+        ok: true,
+        message: `Name geändert: ${oldName} → ${newName}`
+      });
+
+      broadcastUserList();
+    } catch (err) {
+      console.error('adminRenameUser Fehler:', err.message);
+      socket.emit('adminActionResult', { ok: false, message: 'Fehler beim Umbenennen.' });
+    }
+  });
+
+  socket.on('adminClearChat', async () => {
+    const caller = sessions.get(socket.id);
+    if (caller !== 'Divo') return;
+
+    try {
+      await Message.deleteMany({});
+      io.emit('loadHistory', []);
+      socket.emit('adminActionResult', { ok: true, message: 'Gesamter Chat gelöscht.' });
+    } catch (err) {
+      console.error('adminClearChat Fehler:', err.message);
+      socket.emit('adminActionResult', { ok: false, message: 'Fehler beim Löschen.' });
+    }
+  });
+
+  socket.on('adminDeleteMessage', async ({ id }) => {
+    const caller = sessions.get(socket.id);
+    if (caller !== 'Divo') return;
+
+    try {
+      if (!id) {
+        return socket.emit('adminActionResult', { ok: false, message: 'Nachrichten-ID fehlt.' });
+      }
+
+      await Message.findByIdAndDelete(id);
+      io.emit('adminMessageDeleted', { id });
+      socket.emit('adminActionResult', { ok: true, message: 'Nachricht gelöscht.' });
+    } catch (err) {
+      console.error('adminDeleteMessage Fehler:', err.message);
+      socket.emit('adminActionResult', { ok: false, message: 'Fehler beim Löschen der Nachricht.' });
     }
   });
 

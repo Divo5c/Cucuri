@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   const socket = io();
 
-  // Elemente sicher holen (damit es nicht abstürzt, wenn etwas fehlt)
   const getEl = (id) => document.getElementById(id);
-  
+
   const authModal = getEl('authModal');
   const chatContainer = getEl('chatContainer');
   const registerTab = getEl('registerTab');
@@ -31,7 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const gamesMenu = getEl('gamesMenu');
   const toggleGamesBtn = getEl('toggleGamesBtn');
 
-  // ---------- Tabs wechseln ----------
+  const adminToggle = getEl('adminToggle');
+  const adminPanel = getEl('adminPanel');
+  const adminNameEl = getEl('adminName');
+  const banUsernameInput = getEl('banUsername');
+  const banBtn = getEl('banBtn');
+  const oldNameInput = getEl('oldName');
+  const newNameInput = getEl('newName');
+  const renameBtn = getEl('renameBtn');
+  const clearChatBtn = getEl('clearChatBtn');
+
+  // Tabs
   if (switchToLogin) {
     switchToLogin.addEventListener('click', (e) => {
       e.preventDefault();
@@ -56,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------- Registrieren ----------
+  // Registrieren
   if (registerBtn) {
     registerBtn.addEventListener('click', () => {
       const username = regUsername.value.trim();
@@ -79,7 +88,10 @@ document.addEventListener('DOMContentLoaded', () => {
         registerTab.classList.remove('active');
         loginTab.classList.add('active');
       }
-      if (registerError) registerError.textContent = '';
+      if (registerError) {
+        registerError.textContent = '';
+        registerError.style.color = 'red';
+      }
     }, 1500);
   });
 
@@ -90,14 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ---------- Einloggen ----------
+  // Login
   if (loginBtn) {
     loginBtn.addEventListener('click', () => {
-      if (loginError) loginError.textContent = 'Lade...'; // Zeigt, dass der Knopf geklickt wurde!
-      
+      if (loginError) loginError.textContent = 'Lade...';
       const username = loginUsername.value.trim();
       const password = loginPassword.value.trim();
-      
       if (!username || !password) {
         if (loginError) loginError.textContent = 'Bitte alles ausfüllen!';
         return;
@@ -107,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   socket.on('loginSuccess', (username) => {
-    // NEU: Username im Browser speichern für Jugendwort-Seite
     try {
       localStorage.setItem('cucuri_username', username);
     } catch {}
@@ -117,28 +126,33 @@ document.addEventListener('DOMContentLoaded', () => {
       chatContainer.classList.remove('hidden');
       chatContainer.style.display = 'flex';
     }
+
+    // Admin sichtbar machen, wenn Divo
+    if (username === 'Divo' && adminToggle && adminPanel && adminNameEl) {
+      adminToggle.classList.remove('hidden');
+      adminNameEl.textContent = username;
+
+      adminToggle.addEventListener('click', () => {
+        const isHidden = adminPanel.classList.contains('hidden');
+        adminPanel.classList.toggle('hidden', !isHidden);
+        adminToggle.classList.toggle('active', isHidden);
+      });
+    }
   });
 
   socket.on('loginError', (err) => {
     if (loginError) loginError.textContent = err;
   });
 
-  // ---------- Chat Historie (Die letzten 100) ----------
+  // Chat-Historie
   socket.on('loadHistory', (history) => {
     if (!messages) return;
-    messages.innerHTML = ''; 
-    
-    history.forEach(data => {
-      const div = document.createElement('div');
-      div.classList.add('message');
-      div.innerHTML = `<strong>${data.username}</strong> <time>${data.timestamp || ''}</time><br>${data.msg}`;
-      messages.appendChild(div);
-    });
-    
+    messages.innerHTML = '';
+    history.forEach(data => addMessageToDom(data));
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // ---------- Chat Senden ----------
+  // Nachricht senden
   function sendMessage() {
     const msg = messageInput.value.trim();
     if (msg) {
@@ -154,28 +168,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ---------- Nachrichten empfangen ----------
+  // Nachricht empfangen
   socket.on('chatMessage', (data) => {
     if (!messages) return;
-    const div = document.createElement('div');
-    div.classList.add('message');
-    div.innerHTML = `<strong>${data.username}</strong> <time>${data.timestamp || ''}</time><br>${data.msg}`;
-    messages.appendChild(div);
+    addMessageToDom(data);
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // ---------- User Liste Update ----------
+  function addMessageToDom(data) {
+    if (!messages) return;
+    const div = document.createElement('div');
+    div.classList.add('message');
+    div.dataset.id = data._id || ''; // für Löschen
+    div.innerHTML = `<strong>${data.username}</strong> <time>${data.timestamp || ''}</time><br>${data.msg}`;
+
+    const currentUser = localStorage.getItem('cucuri_username');
+    if (currentUser === 'Divo' && data._id) {
+      div.classList.add('deletable');
+      div.addEventListener('click', () => {
+        if (confirm('Diese Nachricht löschen?')) {
+          socket.emit('adminDeleteMessage', { id: data._id });
+        }
+      });
+    }
+
+    messages.appendChild(div);
+  }
+
+  // Nachricht entfernt (von Admin)
+  socket.on('adminMessageDeleted', ({ id }) => {
+    if (!messages || !id) return;
+    const nodes = messages.querySelectorAll('.message');
+    nodes.forEach(node => {
+      if (node.dataset.id === id) {
+        node.remove();
+      }
+    });
+  });
+
+  // User-Liste
   socket.on('updateUserList', (data) => {
     if (!onlineList) return;
     onlineList.innerHTML = '';
-    
     data.online.forEach(user => {
       const li = document.createElement('li');
       li.innerHTML = `🟢 ${user}`;
       li.style.background = 'rgba(0,255,136,0.2)';
       onlineList.appendChild(li);
     });
-
     data.offline.forEach(user => {
       const li = document.createElement('li');
       li.innerHTML = `🔴 ${user}`;
@@ -185,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ---------- Join / Leave Alerts ----------
   socket.on('userJoined', (username) => {
     if (!messages) return;
     const div = document.createElement('div');
@@ -206,21 +245,48 @@ document.addEventListener('DOMContentLoaded', () => {
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // ---------- Games Menü Toggle ----------
+  // Games Menü
   if (gamesMenu && toggleGamesBtn) {
     if (window.innerWidth <= 768) {
       gamesMenu.classList.add('closed');
     }
-
     toggleGamesBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); 
+      e.stopPropagation();
       gamesMenu.classList.toggle('closed');
     });
-
     document.addEventListener('click', (e) => {
       if (window.innerWidth <= 768 && !gamesMenu.classList.contains('closed') && !gamesMenu.contains(e.target)) {
         gamesMenu.classList.add('closed');
       }
     });
   }
+
+  // Admin-Funktionen
+  if (banBtn && banUsernameInput) {
+    banBtn.addEventListener('click', () => {
+      const user = banUsernameInput.value.trim();
+      if (!user) return alert('Username eingeben.');
+      socket.emit('adminToggleBan', { username: user });
+    });
+  }
+
+  if (renameBtn && oldNameInput && newNameInput) {
+    renameBtn.addEventListener('click', () => {
+      const oldName = oldNameInput.value.trim();
+      const newName = newNameInput.value.trim();
+      if (!oldName || !newName) return alert('Beide Felder ausfüllen.');
+      socket.emit('adminRenameUser', { oldName, newName });
+    });
+  }
+
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      if (!confirm('Gesamten Chat wirklich löschen?')) return;
+      socket.emit('adminClearChat');
+    });
+  }
+
+  socket.on('adminActionResult', (data) => {
+    alert(data.message || 'Admin-Aktion ausgeführt.');
+  });
 });
