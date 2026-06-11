@@ -17,7 +17,11 @@ if (!MONGO_URI) {
 } else {
   console.log('⏳ Verbinde mit MongoDB...');
   mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Erfolgreich mit MongoDB verbunden!'))
+    .then(() => {
+      console.log('✅ Erfolgreich mit MongoDB verbunden!');
+      // NEU: Beim Start alle User laden und als offline zählen
+      return initOnlineUsers();
+    })
     .catch(err => console.error('❌ MongoDB Verbindungsfehler:', err.message));
 }
 
@@ -40,6 +44,19 @@ const sessions = new Map();
 const onlineUsers = new Set();
 // Verbindungszähler pro User
 const userConnectionCounts = new Map();
+
+// NEU: Beim Serverstart alle User laden
+async function initOnlineUsers() {
+  try {
+    const allUsers = await User.find({}, 'username');
+    const allUsernames = allUsers.map(u => u.username);
+    console.log('ℹ Geladene User beim Start:', allUsernames.join(', '));
+    // onlineUsers bleibt leer, aber broadcastUserList wird aufgerufen
+    broadcastUserList();
+  } catch (err) {
+    console.error('Fehler beim Initialisieren der User-Liste:', err.message);
+  }
+}
 
 async function broadcastUserList() {
   try {
