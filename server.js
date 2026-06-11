@@ -38,7 +38,7 @@ const Message = mongoose.models.Message || mongoose.model('Message', messageSche
 
 const sessions = new Map();
 const onlineUsers = new Set();
-// NEU: Verbindungszähler pro User
+// Verbindungszähler pro User
 const userConnectionCounts = new Map();
 
 async function broadcastUserList() {
@@ -326,7 +326,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // NEU: Disconnect nur beim letzten Socket des Users
+  // Disconnect nur beim letzten Socket des Users
   socket.on('disconnect', () => {
     const username = sessions.get(socket.id);
     if (!username) return;
