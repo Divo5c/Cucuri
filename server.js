@@ -34,7 +34,7 @@ if (!MONGO_URI) {
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  jugendwortChoice: { type: String, default: null } // NEU: gewähltes Jugendwort
+  jugendwortChoice: { type: String, default: null } // gewähltes Jugendwort
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
@@ -71,7 +71,7 @@ async function broadcastUserList() {
 // ==========================================
 // MIDDLEWARE: Username für HTTP-Requests
 // ==========================================
-// Wir nutzen später ?user=<username> in der URL, um zu wissen, wer votet.
+// Wir nehmen den Usernamen aus dem Query-Parameter ?user=...
 app.use((req, res, next) => {
   const u = req.query.user;
   req.currentUsername = u || null;
@@ -82,7 +82,7 @@ app.use((req, res, next) => {
 // JUGENDWORT VOTING API
 // ==========================================
 
-// Basis-Liste der Jugendwörter (IDs musst du auch im Frontend nutzen)
+// Basis-Liste der Jugendwörter (IDs musst du im Frontend nutzen)
 const JUGENDWORT_WORDS = [
   {
     id: 'start-1',
@@ -102,7 +102,6 @@ app.get('/api/jugendwort/votes', async (req, res) => {
   try {
     const currentUsername = req.currentUsername;
 
-    // Alle User mit Choice holen
     const users = await User.find(
       { jugendwortChoice: { $ne: null } },
       'jugendwortChoice username'
@@ -137,7 +136,7 @@ app.get('/api/jugendwort/votes', async (req, res) => {
   }
 });
 
-// POST: Abstimmen (nur 1x pro User)
+// POST: Abstimmen oder Vote ändern
 app.post('/api/jugendwort/vote', async (req, res) => {
   try {
     const currentUsername = req.currentUsername;
@@ -150,7 +149,6 @@ app.post('/api/jugendwort/vote', async (req, res) => {
       return res.status(400).json({ error: 'wordId fehlt.' });
     }
 
-    // Existiert das Wort überhaupt in der Liste?
     const exists = JUGENDWORT_WORDS.some(w => w.id === wordId);
     if (!exists) {
       return res.status(400).json({ error: 'Unbekanntes Jugendwort.' });
@@ -161,10 +159,7 @@ app.post('/api/jugendwort/vote', async (req, res) => {
       return res.status(404).json({ error: 'User nicht gefunden.' });
     }
 
-    if (user.jugendwortChoice) {
-      return res.status(400).json({ error: 'Du hast bereits abgestimmt.' });
-    }
-
+    // Hier erlauben wir Vote-Änderung
     user.jugendwortChoice = wordId;
     await user.save();
 
@@ -172,6 +167,40 @@ app.post('/api/jugendwort/vote', async (req, res) => {
   } catch (err) {
     console.error('Fehler bei /api/jugendwort/vote:', err.message);
     res.status(500).json({ error: 'Serverfehler beim Voting.' });
+  }
+});
+
+// GET: Admin-Übersicht (nur für Divo)
+app.get('/api/jugendwort/admin', async (req, res) => {
+  try {
+    const currentUsername = req.currentUsername;
+    if (currentUsername !== 'Divo') {
+      return res.status(403).json({ error: 'Kein Admin.' });
+    }
+
+    // Alle User mit ihrer Wahl
+    const users = await User.find({}, 'username jugendwortChoice');
+
+    // Votes pro Wort zählen
+    const counts = {};
+    users.forEach(u => {
+      if (!u.jugendwortChoice) return;
+      counts[u.jugendwortChoice] = (counts[u.jugendwortChoice] || 0) + 1;
+    });
+
+    const wordStats = JUGENDWORT_WORDS.map(w => ({
+      id: w.id,
+      term: w.term,
+      votes: counts[w.id] || 0
+    }));
+
+    res.json({
+      users,
+      wordStats
+    });
+  } catch (err) {
+    console.error('Fehler bei /api/jugendwort/admin:', err.message);
+    res.status(500).json({ error: 'Serverfehler bei Admin-Daten.' });
   }
 });
 

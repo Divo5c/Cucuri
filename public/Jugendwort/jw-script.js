@@ -1,4 +1,4 @@
-// Jugendwort Voting Script – Mongo-Backend, 1 Vote pro User, Admin-View für "Divo"
+// Jugendwort Voting Script – Mongo-Backend, Vote änderbar, Admin-View für "Divo"
 (() => {
   const listEl = document.getElementById("jw-list");
   const emptyEl = document.getElementById("jw-empty");
@@ -51,10 +51,6 @@
     currentUser = getCurrentUser();
     if (!currentUser) {
       alert("Bitte im Chat einloggen, bevor du votest.");
-      return;
-    }
-    if (currentChoice) {
-      alert("Du hast schon abgestimmt.");
       return;
     }
 
@@ -125,11 +121,7 @@
       const card = document.createElement("article");
       card.className = `jw-card ${rankClass}`;
 
-      const btnText = currentChoice
-        ? isChosen
-          ? "Dein Vote"
-          : "Schon gevotet"
-        : "Vote geben";
+      const btnText = isChosen ? "Gewählt (ändern)" : "Vote geben";
 
       card.innerHTML = `
         <div class="jw-card-header">
@@ -150,7 +142,6 @@
             <button
               class="jw-btn jw-vote-btn"
               data-id="${encodeURIComponent(w.id)}"
-              ${currentChoice ? "disabled" : ""}
             >
               ${btnText}
             </button>
@@ -187,7 +178,7 @@
       adminToggleBtn.textContent = isHidden ? "Admin verstecken" : "Admin anzeigen";
     });
 
-    // Admin-Form etc. sind in dieser Version nur Platzhalter
+    // Admin-Form-Deaktivierung
     addForm?.addEventListener("submit", (e) => {
       e.preventDefault();
       alert("Wörter kommen aktuell vom Server-Code (JUGENDWORT_WORDS im server.js).");
@@ -226,8 +217,8 @@
           <table class="jw-admin-table">
             <thead>
               <tr>
-                <th>Wort</th>
-                <th>Votes</th>
+                <th>User</th>
+                <th>Wort-ID</th>
               </tr>
             </thead>
             <tbody class="jw-admin-tbody"></tbody>
@@ -252,7 +243,7 @@
     });
   }
 
-  function updateAdminOverview() {
+  async function updateAdminOverview() {
     if (!adminOverviewEl) return;
     const dataEl = adminOverviewEl.querySelector(".jw-admin-data");
     if (dataEl.classList.contains("jw-hidden")) return;
@@ -260,31 +251,42 @@
     const currentVoteEl = adminOverviewEl.querySelector(".jw-admin-current-vote");
     const tbody = adminOverviewEl.querySelector(".jw-admin-tbody");
 
-    currentUser = getCurrentUser();
-
-    if (currentUser === "Divo" && currentChoice) {
-      const chosen = words.find((w) => w.id === currentChoice);
-      if (chosen) {
-        currentVoteEl.textContent = `Dein Mongo-Vote: "${chosen.term}" (${chosen.votes || 0} Votes gesamt).`;
-      } else {
-        currentVoteEl.textContent = "Dein Vote zeigt auf ein Wort, das nicht mehr in der Liste ist.";
-      }
-    } else if (currentUser === "Divo") {
-      currentVoteEl.textContent = "Du (Divo) hast noch nicht gevotet.";
-    } else {
-      currentVoteEl.textContent = "Nur für Admin sichtbar.";
+    const adminUser = getCurrentUser();
+    if (adminUser !== "Divo") {
+      currentVoteEl.textContent = "Nur für Admin (Divo) sichtbar.";
+      tbody.innerHTML = "";
+      return;
     }
 
-    tbody.innerHTML = "";
-    const sorted = [...words].sort((a, b) => (b.votes || 0) - (a.votes || 0));
-    sorted.forEach((w) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${escapeHtml(w.term || "")}</td>
-        <td>${w.votes || 0}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+    try {
+      const res = await fetch(`/api/jugendwort/admin?user=${encodeURIComponent(adminUser)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        currentVoteEl.textContent = data.error || "Fehler beim Laden der Admin-Daten.";
+        tbody.innerHTML = "";
+        return;
+      }
+
+      const users = data.users || [];
+      const wordStats = data.wordStats || [];
+
+      const totalVotes = wordStats.reduce((sum, w) => sum + (w.votes || 0), 0);
+      currentVoteEl.textContent = `Gesamtvotes: ${totalVotes} – Einträge: ${users.length}`;
+
+      tbody.innerHTML = "";
+      users.forEach((u) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${escapeHtml(u.username)}</td>
+          <td>${u.jugendwortChoice || "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.error("Admin-Daten Fehler:", e);
+      currentVoteEl.textContent = "Fehler beim Laden der Admin-Daten.";
+      tbody.innerHTML = "";
+    }
   }
 
   // Init
