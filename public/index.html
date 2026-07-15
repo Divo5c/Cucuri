@@ -13,13 +13,15 @@
       <h1 class="chat-title">Cucuri Chat</h1>
       <div class="chat-header-actions">
         <button id="adminToggle" class="admin-btn hidden">Admin</button>
+        <button id="jugendwortBtn" class="admin-btn">Jugendwort</button>
         <button id="voiceChatBtn" class="admin-btn">🎙️ Voice</button>
       </div>
     </header>
 
+    <!-- Login / Register Modal -->
     <div id="authModal" class="modal active">
       <div class="modal-content">
-        <span class="close" id="closeBtn">&times;</span>
+        <!-- Close-X entfernt -->
 
         <div id="loginTab" class="tab active">
           <h2>🔑 Einloggen</h2>
@@ -41,19 +43,68 @@
       </div>
     </div>
 
-    <div id="chatContainer" class="hidden">
-      <div class="chat-main">
-        <div id="messages"></div>
-        <div class="input-area">
-          <input
-            type="text"
-            id="messageInput"
-            placeholder="Nachricht schreiben..."
-            maxlength="200"
-          />
-          <button id="sendBtn">Senden</button>
-        </div>
+    <!-- Jugendwort-Ergebnis-Modal -->
+    <div id="jugendwortModal" class="modal">
+      <div class="modal-content jugendwort-modal">
+        <h2>Jugendwort</h2>
+        <p class="jw-text">
+          Die Abstimmung für das Jugendwort in der 7c ist vorbei!
+        </p>
+        <p class="jw-result">
+          Gewonnen hat <span class="jw-term">"Trei"</span> mit
+          <strong>6 Votes</strong>.
+        </p>
+        <p class="jw-footer">--Erstellt von Diraj Voruganti--</p>
+        <button id="jwCloseBtn">Schließen</button>
       </div>
+    </div>
+
+<div id="chatContainer" class="hidden">
+  <div class="chat-main">
+    <div id="messages"></div>
+    <div class="input-area">
+      <input
+        type="text"
+        id="messageInput"
+        placeholder="Nachricht schreiben..."
+        maxlength="200"
+      />
+      <button id="sendBtn">Senden</button>
+    </div>
+  </div>
+
+  <!-- Linke Sidebar: Lobby -->
+  <div class="sidebar">
+    <h3>Lobby</h3>
+    <ul id="onlineList"></ul>
+  </div>
+
+  <!-- Rechte Mini-Voice-Sidebar -->
+  <aside id="voiceSidebar" class="voice-sidebar">
+    <div class="voice-header-mini">
+      <span class="voice-title-mini">🎙 Voice</span>
+      <button id="voiceCollapseBtn" class="voice-collapse-btn">⮜</button>
+    </div>
+
+    <div class="voice-body-mini">
+      <div class="voice-status-line">
+        <span id="voiceStatusMini">Nicht verbunden</span>
+      </div>
+
+      <div class="voice-controls-mini">
+        <button id="voiceJoinBtn" class="voice-btn-mini">
+          Join Voice
+        </button>
+        <button id="voiceMuteMiniBtn" class="voice-btn-mini">
+          Mute
+        </button>
+      </div>
+
+      <h4 class="voice-participants-title">Im Voice:</h4>
+      <ul id="voiceParticipantsMini" class="voice-participants-list"></ul>
+    </div>
+  </aside>
+</div>
       <div class="sidebar">
         <h3>Lobby</h3>
         <ul id="onlineList"></ul>
@@ -122,12 +173,7 @@
         <a href="/spiel.html" target="_blank" class="game-btn meinspiel"
           >🎮 Mein Spiel</a
         >
-        <a
-          href="/Jugendwort/index.html"
-          target="_blank"
-          class="game-btn jugendwort"
-          >🗳 Jugendwort Voting</a
-        >
+        <!-- Jugendwort Voting-Link entfernt -->
       </div>
     </div>
 

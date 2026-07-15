@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const socket = io();
   let localStream = null;
-  let peers = new Map();
+  let peers = new Map(); // socketId -> RTCPeerConnection
   let currentRoomId = null;
   let isMuted = false;
   let username = localStorage.getItem("cucuri_username") || "Unbekannt";
@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const adminVoiceControls = getEl("adminVoiceControls");
   const newRoomNameInput = getEl("newRoomName");
   const createRoomBtn = getEl("createRoomBtn");
+  const toggleMuteBtn = getEl("toggleMuteBtn");
+  const leaveVoiceBtn = getEl("leaveVoiceBtn");
 
   const iceConfiguration = {
     iceServers: [
@@ -25,6 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
   };
 
+  // Räume vom Server holen (du musst serverseitig getVoiceRooms implementieren, falls noch nicht)
   socket.emit("getVoiceRooms");
 
   socket.on("voiceRoomsList", (rooms) => renderRooms(rooms));
@@ -44,6 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function joinVoiceRoom(roomId, roomName) {
     if (currentRoomId === roomId) return;
+
+    // alten Raum verlassen
     if (currentRoomId) await leaveVoiceRoom();
 
     currentRoomId = roomId;
@@ -59,10 +64,11 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       });
 
-      voiceStatus.textContent = "✅ Verbunden";
+      voiceStatus.textContent = "✅ Mikrofon aktiv";
       if (username === "Divo") adminVoiceControls.classList.remove("hidden");
 
       addParticipantToUI(username, true);
+
       socket.emit("joinVoiceRoom", { roomId, username });
     } catch (err) {
       voiceStatus.textContent = "❌ Mikrofon-Fehler";
@@ -82,29 +88,30 @@ document.addEventListener("DOMContentLoaded", () => {
     voiceStatus.textContent = "Verlassen";
   }
 
-  function addParticipantToUI(name, isLocal = false) {
-    if (document.getElementById(`participant-${name}`)) return;
+  function addParticipantToUI(nameOrId, isLocal = false) {
+    const id = `participant-${nameOrId}`;
+    if (document.getElementById(id)) return;
 
     const div = document.createElement("div");
     div.className = "participant";
-    div.id = `participant-${name}`;
+    div.id = id;
     div.innerHTML = `
       <div style="font-size:2.5rem;margin-bottom:10px;">${isLocal ? "🎤" : "👤"}</div>
-      <strong>${name}</strong>
+      <strong>${isLocal ? username : nameOrId}</strong>
       ${isLocal ? '<small style="color:#00FF88;">(Du)</small>' : ""}
     `;
     participantsGrid.appendChild(div);
   }
 
   // Mute
-  getEl("toggleMuteBtn").addEventListener("click", () => {
+  toggleMuteBtn.addEventListener("click", () => {
     if (!localStream) return;
     isMuted = !isMuted;
     localStream.getAudioTracks()[0].enabled = !isMuted;
-    getEl("toggleMuteBtn").textContent = isMuted ? "🔊 Unmute" : "🔇 Mute";
+    toggleMuteBtn.textContent = isMuted ? "🔊 Unmute" : "🔇 Mute";
   });
 
-  getEl("leaveVoiceBtn").addEventListener("click", leaveVoiceRoom);
+  leaveVoiceBtn.addEventListener("click", leaveVoiceRoom);
 
   createRoomBtn.addEventListener("click", () => {
     const name = newRoomNameInput.value.trim();
@@ -112,55 +119,83 @@ document.addEventListener("DOMContentLoaded", () => {
     newRoomNameInput.value = "";
   });
 
-  // WebRTC Signaling
-  socket.on("userJoinedVoice", async ({ username: newUser }) => {
-    if (newUser === username) return;
-    addParticipantToUI(newUser);
-    const pc = createPeerConnection(newUser);
-    peers.set(newUser, pc);
+  // ========== WebRTC / Signaling ==========
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socket.emit("offer", { target: newUser, offer });
-  });
-
-  function createPeerConnection(targetUsername) {
+  function createPeerConnection(peerSocketId) {
     const pc = new RTCPeerConnection(iceConfiguration);
 
-    localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+    if (localStream) {
+      localStream
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, localStream));
+    }
 
     pc.onicecandidate = ({ candidate }) => {
-      if (candidate)
-        socket.emit("iceCandidate", { target: targetUsername, candidate });
+      if (candidate) {
+        socket.emit("iceCandidate", { targetId: peerSocketId, candidate });
+      }
     };
 
     pc.ontrack = (event) => {
-      console.log("Audio received from", targetUsername);
+      console.log("Audio-Stream von", peerSocketId);
+      // hier könntest du z.B. ein <audio> Element pro Peer anlegen
     };
 
     return pc;
   }
 
-  socket.on("offer", async ({ from, offer }) => {
-    let pc = peers.get(from);
+  // Wenn wir die Liste der vorhandenen Peers im Raum bekommen
+  socket.on("voicePeers", async (peerIds) => {
+    for (const peerId of peerIds) {
+      addParticipantToUI(peerId, false);
+      const pc = createPeerConnection(peerId);
+      peers.set(peerId, pc);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("offer", { targetId: peerId, offer });
+    }
+  });
+
+  // Ein neuer User joint den Raum
+  socket.on("userJoinedVoice", ({ socketId, username: peerName }) => {
+    addParticipantToUI(socketId, false);
+  });
+
+  socket.on("offer", async ({ fromId, offer }) => {
+    let pc = peers.get(fromId);
     if (!pc) {
-      pc = createPeerConnection(from);
-      peers.set(from, pc);
+      pc = createPeerConnection(fromId);
+      peers.set(fromId, pc);
     }
     await pc.setRemoteDescription(offer);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socket.emit("answer", { target: from, answer });
+    socket.emit("answer", { targetId: fromId, answer });
   });
 
-  socket.on("answer", async ({ from, answer }) => {
-    const pc = peers.get(from);
-    if (pc) await pc.setRemoteDescription(answer);
+  socket.on("answer", async ({ fromId, answer }) => {
+    const pc = peers.get(fromId);
+    if (pc) {
+      await pc.setRemoteDescription(answer);
+    }
   });
 
-  socket.on("iceCandidate", async ({ from, candidate }) => {
-    const pc = peers.get(from);
-    if (pc) await pc.addIceCandidate(candidate);
+  socket.on("iceCandidate", async ({ fromId, candidate }) => {
+    const pc = peers.get(fromId);
+    if (pc && candidate) {
+      await pc.addIceCandidate(candidate);
+    }
+  });
+
+  socket.on("userLeftVoice", ({ socketId }) => {
+    const pc = peers.get(socketId);
+    if (pc) {
+      pc.close();
+      peers.delete(socketId);
+    }
+    const el = document.getElementById(`participant-${socketId}`);
+    if (el) el.remove();
   });
 
   window.addEventListener("beforeunload", leaveVoiceRoom);

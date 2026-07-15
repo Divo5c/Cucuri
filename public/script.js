@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const switchToLogin = getEl("switchToLogin");
   const switchToRegister = getEl("switchToRegister");
-  const closeBtn = getEl("closeBtn");
+  const closeBtn = getEl("closeBtn"); // existiert im HTML nicht mehr, stört aber nicht
 
   const messages = getEl("messages");
   const messageInput = getEl("messageInput");
@@ -40,8 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const renameBtn = getEl("renameBtn");
   const clearChatBtn = getEl("clearChatBtn");
 
-  // === NEU: Voice Button ===
+  // Voice-Button
   const voiceChatBtn = getEl("voiceChatBtn");
+
+  // NEU: Jugendwort-Button + Modal
+  const jugendwortBtn = getEl("jugendwortBtn");
+  const jugendwortModal = getEl("jugendwortModal");
+  const jwCloseBtn = getEl("jwCloseBtn");
 
   // Tabs
   if (switchToLogin) {
@@ -68,7 +73,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Registrieren
+  // ==================== REGISTER ====================
+
   if (registerBtn) {
     registerBtn.addEventListener("click", () => {
       const username = regUsername.value.trim();
@@ -80,6 +86,16 @@ document.addEventListener("DOMContentLoaded", () => {
       socket.emit("register", { username, password });
     });
   }
+
+  // ENTER für Register
+  function handleRegisterEnter(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (registerBtn) registerBtn.click();
+    }
+  }
+  if (regUsername) regUsername.addEventListener("keydown", handleRegisterEnter);
+  if (regPassword) regPassword.addEventListener("keydown", handleRegisterEnter);
 
   socket.on("registerSuccess", () => {
     if (registerError) {
@@ -105,7 +121,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Login
+  // ==================== LOGIN ====================
+
   if (loginBtn) {
     loginBtn.addEventListener("click", () => {
       if (loginError) loginError.textContent = "Lade...";
@@ -118,6 +135,18 @@ document.addEventListener("DOMContentLoaded", () => {
       socket.emit("login", { username, password });
     });
   }
+
+  // ENTER für Login
+  function handleLoginEnter(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (loginBtn) loginBtn.click();
+    }
+  }
+  if (loginUsername)
+    loginUsername.addEventListener("keydown", handleLoginEnter);
+  if (loginPassword)
+    loginPassword.addEventListener("keydown", handleLoginEnter);
 
   socket.on("loginSuccess", (username) => {
     try {
@@ -142,6 +171,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
+    // Jugendwort-Button nur für Divo anzeigen
+    if (username === "Divo" && jugendwortBtn) {
+      jugendwortBtn.classList.remove("hidden");
+    }
+
     // Voice Button nach Login anzeigen
     if (voiceChatBtn) voiceChatBtn.classList.remove("hidden");
   });
@@ -150,7 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (loginError) loginError.textContent = err;
   });
 
-  // Chat-Historie
+  // ==================== CHAT-HISTORIE ====================
+
   socket.on("loadHistory", (history) => {
     if (!messages) return;
     messages.innerHTML = "";
@@ -186,16 +221,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const div = document.createElement("div");
     div.classList.add("message");
     div.dataset.id = data._id || "";
-    div.innerHTML = `<strong>${data.username}</strong> <time>${data.timestamp || ""}</time><br>${data.msg}`;
 
     const currentUser = localStorage.getItem("cucuri_username");
+
+    div.innerHTML = `
+      <div class="msg-header">
+        <span class="msg-username">${data.username}</span>
+        <div class="msg-meta">
+          <time class="msg-time">${data.timestamp || ""}</time>
+        </div>
+      </div>
+      <div class="msg-text">${data.msg}</div>
+    `;
+
     if (currentUser === "Divo" && data._id) {
-      div.classList.add("deletable");
-      div.addEventListener("click", () => {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.classList.add("msg-delete-btn");
+      deleteBtn.innerHTML = "🗑";
+
+      deleteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
         if (confirm("Diese Nachricht löschen?")) {
           socket.emit("adminDeleteMessage", { id: data._id });
         }
       });
+
+      const meta = div.querySelector(".msg-meta");
+      meta.appendChild(deleteBtn);
+
+      div.classList.add("deletable");
     }
 
     messages.appendChild(div);
@@ -300,10 +354,237 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(data.message || "Admin-Aktion ausgeführt.");
   });
 
-  // ==================== VOICE CHAT INTEGRATION ====================
-  if (voiceChatBtn) {
+  // ==================== Jugendwort Ergebnis-Modal ====================
+
+  if (jugendwortBtn && jugendwortModal) {
+    jugendwortBtn.addEventListener("click", () => {
+      jugendwortModal.classList.add("active");
+    });
+  }
+
+  if (jwCloseBtn && jugendwortModal) {
+    jwCloseBtn.addEventListener("click", () => {
+      jugendwortModal.classList.remove("active");
+    });
+  }
+
+  // ==================== VOICE CHAT INTEGRATION (Mini-Panel) ====================
+
+  const voiceSidebar = document.getElementById("voiceSidebar");
+  const voiceCollapseBtn = document.getElementById("voiceCollapseBtn");
+  const voiceJoinBtn = document.getElementById("voiceJoinBtn");
+  const voiceMuteMiniBtn = document.getElementById("voiceMuteMiniBtn");
+  const voiceStatusMini = document.getElementById("voiceStatusMini");
+  const voiceParticipantsMini = document.getElementById(
+    "voiceParticipantsMini",
+  );
+
+  let vcLocalStream = null;
+  let vcPeers = new Map(); // socketId -> RTCPeerConnection
+  let vcRoomId = "lobby"; // ein fester Standard-Raum
+  let vcMuted = false;
+
+  const vcIceConfig = {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:openrelay.metered.ca:80" },
+    ],
+  };
+
+  function vcSetStatus(text) {
+    if (voiceStatusMini) voiceStatusMini.textContent = text;
+  }
+
+  function vcAddParticipant(id, label, isYou = false) {
+    if (!voiceParticipantsMini) return;
+    const existing = voiceParticipantsMini.querySelector(
+      `[data-vp-id="${id}"]`,
+    );
+    if (existing) return;
+
+    const li = document.createElement("li");
+    li.dataset.vpId = id;
+    li.innerHTML = `
+      <div class="vp-name">
+        <span class="vp-icon">${isYou ? "🎤" : "👤"}</span>
+        <span>${label}</span>
+        ${isYou ? '<span class="vp-you">(Du)</span>' : ""}
+      </div>
+    `;
+    voiceParticipantsMini.appendChild(li);
+  }
+
+  function vcRemoveParticipant(id) {
+    if (!voiceParticipantsMini) return;
+    const el = voiceParticipantsMini.querySelector(`[data-vp-id="${id}"]`);
+    if (el) el.remove();
+  }
+
+  function vcClearParticipants() {
+    if (voiceParticipantsMini) voiceParticipantsMini.innerHTML = "";
+  }
+
+  // Sidebar ein-/ausklappen
+  if (voiceCollapseBtn && voiceSidebar) {
+    voiceCollapseBtn.addEventListener("click", () => {
+      voiceSidebar.classList.toggle("collapsed");
+    });
+  }
+
+  async function vcStartLocalAudio() {
+    vcLocalStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+    vcSetStatus("Mikro aktiv");
+    const currentUser = localStorage.getItem("cucuri_username") || "Du";
+    vcAddParticipant("local", currentUser, true);
+  }
+
+  async function vcJoinRoom() {
+    if (vcLocalStream) {
+      // schon drin
+      return;
+    }
+    try {
+      await vcStartLocalAudio();
+      const currentUser =
+        localStorage.getItem("cucuri_username") || "Unbekannt";
+      socket.emit("joinVoiceRoom", { roomId: vcRoomId, username: currentUser });
+      vcSetStatus("Verbinde...");
+    } catch (err) {
+      console.error("VC Mikro Fehler:", err);
+      vcSetStatus("Mikro-Fehler");
+    }
+  }
+
+  async function vcLeaveRoom() {
+    if (vcLocalStream) {
+      vcLocalStream.getTracks().forEach((t) => t.stop());
+      vcLocalStream = null;
+    }
+    vcPeers.forEach((pc) => pc.close());
+    vcPeers.clear();
+    vcClearParticipants();
+    vcSetStatus("Nicht verbunden");
+  }
+
+  function vcCreatePeerConnection(peerSocketId) {
+    const pc = new RTCPeerConnection(vcIceConfig);
+
+    if (vcLocalStream) {
+      vcLocalStream
+        .getTracks()
+        .forEach((track) => pc.addTrack(track, vcLocalStream));
+    }
+
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) {
+        socket.emit("iceCandidate", { targetId: peerSocketId, candidate });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      // Fürs Mini-Widget machen wir nur Audio, kein UI-Element pro Stream
+      const audio = new Audio();
+      audio.autoplay = true;
+      audio.srcObject = event.streams[0];
+    };
+
+    return pc;
+  }
+
+  if (voiceJoinBtn) {
+    voiceJoinBtn.addEventListener("click", () => {
+      if (!vcLocalStream) {
+        vcJoinRoom();
+        voiceJoinBtn.textContent = "Leave";
+      } else {
+        vcLeaveRoom();
+        voiceJoinBtn.textContent = "Join Voice";
+      }
+    });
+  }
+
+  if (voiceMuteMiniBtn) {
+    voiceMuteMiniBtn.addEventListener("click", () => {
+      if (!vcLocalStream) return;
+      vcMuted = !vcMuted;
+      vcLocalStream.getAudioTracks().forEach((t) => (t.enabled = !vcMuted));
+      voiceMuteMiniBtn.textContent = vcMuted ? "Unmute" : "Mute";
+    });
+  }
+
+  // Signaling (wiederverwendet server.js-Logik)
+
+  socket.on("voicePeers", async (peerIds) => {
+    const currentUser = localStorage.getItem("cucuri_username") || "Unbekannt";
+    vcSetStatus("Verbunden");
+    vcAddParticipant("local", currentUser, true);
+
+    for (const peerId of peerIds) {
+      if (!peerId) continue;
+      vcAddParticipant(peerId, "User");
+      const pc = vcCreatePeerConnection(peerId);
+      vcPeers.set(peerId, pc);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("offer", { targetId: peerId, offer });
+    }
+  });
+
+  socket.on("userJoinedVoice", ({ socketId, username }) => {
+    if (!socketId) return;
+    vcAddParticipant(socketId, username || "User");
+  });
+
+  socket.on("offer", async ({ fromId, offer }) => {
+    let pc = vcPeers.get(fromId);
+    if (!pc) {
+      pc = vcCreatePeerConnection(fromId);
+      vcPeers.set(fromId, pc);
+    }
+    await pc.setRemoteDescription(offer);
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    socket.emit("answer", { targetId: fromId, answer });
+  });
+
+  socket.on("answer", async ({ fromId, answer }) => {
+    const pc = vcPeers.get(fromId);
+    if (pc) {
+      await pc.setRemoteDescription(answer);
+    }
+  });
+
+  socket.on("iceCandidate", async ({ fromId, candidate }) => {
+    const pc = vcPeers.get(fromId);
+    if (pc && candidate) {
+      await pc.addIceCandidate(candidate);
+    }
+  });
+
+  socket.on("userLeftVoice", ({ socketId }) => {
+    const pc = vcPeers.get(socketId);
+    if (pc) {
+      pc.close();
+      vcPeers.delete(socketId);
+    }
+    vcRemoveParticipant(socketId);
+  });
+
+  window.addEventListener("beforeunload", vcLeaveRoom);
+
+  // Voice-Button im Header: einfach Sidebar fokussieren
+  if (voiceChatBtn && voiceSidebar) {
     voiceChatBtn.addEventListener("click", () => {
-      window.open("/Voice_Chat/voice.html", "_blank");
+      voiceSidebar.classList.remove("collapsed");
+      voiceSidebar.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   }
 });
