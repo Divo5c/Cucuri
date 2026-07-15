@@ -24,7 +24,7 @@ body {
   align-items: stretch;
   width: 90vw;
   height: 80dvh;
-  max-width: 1400px; /* etwas mehr Platz, da VC rechts dazu kommt */
+  max-width: 1400px;
   background: rgba(0, 0, 0, 0.5);
   border: 4px solid #ffd700;
   border-radius: 10px;
@@ -655,6 +655,27 @@ body {
   transform: rotate(180deg);
 }
 
+/* ===== Mobiler Voice-Toggle-Button ===== */
+.voice-mobile-toggle {
+  display: none; /* wird im Mobile-Viewport eingeblendet */
+  position: fixed;
+  right: 12px;
+  bottom: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px solid #00ff88;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-size: 1.6rem;
+  font-family: "Orbitron", sans-serif;
+  cursor: pointer;
+  z-index: 910;
+  box-shadow:
+    0 0 14px rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(0, 255, 136, 0.6);
+}
+
 /* ===== Mobile Anpassungen ===== */
 @media screen and (max-width: 768px) {
   html,
@@ -742,11 +763,29 @@ body {
     font-size: 0.85rem;
   }
 
-  /* Voice-Sidebar unter den Chat verschieben, full-width */
+  /* Voice-Sidebar als Bottom-Sheet ausfahrbar */
   .voice-sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: -260px; /* versteckt */
     width: 100%;
     max-width: 100%;
-    margin-left: 0;
-    margin-top: 10px;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    border-width: 2px 0 0 0;
+    border-color: rgba(0, 255, 140, 0.6);
+    margin-top: 0;
+    z-index: 905;
+    transition: bottom 0.25s ease-out;
+  }
+
+  .voice-sidebar.voice-open {
+    bottom: 0; /* eingeblendet */
+  }
+
+  /* Mobile-Voice-Toggle sichtbar */
+  .voice-mobile-toggle {
+    display: block;
   }
 }

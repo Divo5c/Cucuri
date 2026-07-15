@@ -59,58 +59,51 @@
       </div>
     </div>
 
-<div id="chatContainer" class="hidden">
-  <div class="chat-main">
-    <div id="messages"></div>
-    <div class="input-area">
-      <input
-        type="text"
-        id="messageInput"
-        placeholder="Nachricht schreiben..."
-        maxlength="200"
-      />
-      <button id="sendBtn">Senden</button>
-    </div>
-  </div>
-
-  <!-- Linke Sidebar: Lobby -->
-  <div class="sidebar">
-    <h3>Lobby</h3>
-    <ul id="onlineList"></ul>
-  </div>
-
-  <!-- Rechte Mini-Voice-Sidebar -->
-  <aside id="voiceSidebar" class="voice-sidebar">
-    <div class="voice-header-mini">
-      <span class="voice-title-mini">🎙 Voice</span>
-      <button id="voiceCollapseBtn" class="voice-collapse-btn">⮜</button>
-    </div>
-
-    <div class="voice-body-mini">
-      <div class="voice-status-line">
-        <span id="voiceStatusMini">Nicht verbunden</span>
+    <!-- Haupt-Chat + Lobby + Voice -->
+    <div id="chatContainer" class="hidden">
+      <div class="chat-main">
+        <div id="messages"></div>
+        <div class="input-area">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Nachricht schreiben..."
+            maxlength="200"
+          />
+          <button id="sendBtn">Senden</button>
+        </div>
       </div>
 
-      <div class="voice-controls-mini">
-        <button id="voiceJoinBtn" class="voice-btn-mini">
-          Join Voice
-        </button>
-        <button id="voiceMuteMiniBtn" class="voice-btn-mini">
-          Mute
-        </button>
-      </div>
-
-      <h4 class="voice-participants-title">Im Voice:</h4>
-      <ul id="voiceParticipantsMini" class="voice-participants-list"></ul>
-    </div>
-  </aside>
-</div>
+      <!-- Lobby-Sidebar (einmal!) -->
       <div class="sidebar">
         <h3>Lobby</h3>
         <ul id="onlineList"></ul>
       </div>
+
+      <!-- Rechte Mini-Voice-Sidebar -->
+      <aside id="voiceSidebar" class="voice-sidebar">
+        <div class="voice-header-mini">
+          <span class="voice-title-mini">🎙 Voice</span>
+          <button id="voiceCollapseBtn" class="voice-collapse-btn">⮜</button>
+        </div>
+
+        <div class="voice-body-mini">
+          <div class="voice-status-line">
+            <span id="voiceStatusMini">Nicht verbunden</span>
+          </div>
+
+          <div class="voice-controls-mini">
+            <button id="voiceJoinBtn" class="voice-btn-mini">Join Voice</button>
+            <button id="voiceMuteMiniBtn" class="voice-btn-mini">Mute</button>
+          </div>
+
+          <h4 class="voice-participants-title">Im Voice:</h4>
+          <ul id="voiceParticipantsMini" class="voice-participants-list"></ul>
+        </div>
+      </aside>
     </div>
 
+    <!-- Admin-Panel -->
     <div id="adminPanel" class="admin-panel hidden">
       <div class="admin-panel-content">
         <h2>Admin‑Panel</h2>
@@ -149,6 +142,7 @@
       </div>
     </div>
 
+    <!-- Games-Menü -->
     <div id="gamesMenu" class="games-menu">
       <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
       <div class="games-list">
@@ -173,9 +167,11 @@
         <a href="/spiel.html" target="_blank" class="game-btn meinspiel"
           >🎮 Mein Spiel</a
         >
-        <!-- Jugendwort Voting-Link entfernt -->
       </div>
     </div>
+
+    <!-- Mobiler Voice-Toggle-Button -->
+    <button id="voiceMobileToggle" class="voice-mobile-toggle">🎙</button>
 
     <script src="script.js"></script>
   </body>
