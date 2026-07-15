@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cucuri Voice</title>
+    <link rel="stylesheet" href="voice.css" />
+  </head>
+  <body>
+    <div class="voice-container">
+      <header class="voice-header">
+        <h1>🎙️ Cucuri Voice</h1>
+        <div class="voice-controls">
+          <button id="toggleMuteBtn" class="voice-btn">🔇 Mute</button>
+          <button id="toggleDeafenBtn" class="voice-btn">🎧 Deafen</button>
+          <button id="leaveVoiceBtn" class="voice-btn danger">Verlassen</button>
+        </div>
+      </header>
+
+      <div class="voice-main">
+        <!-- Räume Liste -->
+        <div class="voice-sidebar">
+          <h3>Räume</h3>
+          <ul id="voiceRoomsList"></ul>
+
+          <!-- Admin only -->
+          <div id="adminVoiceControls" class="hidden">
+            <input type="text" id="newRoomName" placeholder="Neuer Raum Name" />
+            <button id="createRoomBtn">+ Raum erstellen</button>
+          </div>
+        </div>
+
+        <!-- Aktiver Raum + Teilnehmer -->
+        <div class="voice-content">
+          <div class="current-room">
+            <h2 id="currentRoomName">General</h2>
+            <span id="participantCount" class="participant-count"
+              >0 sprechen</span
+            >
+          </div>
+
+          <div id="participantsGrid" class="participants-grid">
+            <!-- Wird dynamisch gefüllt -->
+          </div>
+
+          <div class="voice-status" id="voiceStatus">
+            Warte auf Verbindung...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="voice.js"></script>
+  </body>
+</html>

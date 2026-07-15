@@ -1,99 +1,136 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cucuri Chat</title>
-  <link rel="icon" href="favicon.png">
-  <link rel="stylesheet" href="style.css">
-  <script src="/socket.io/socket.io.js"></script>
-</head>
-<body>
-  <header class="chat-header">
-    <h1 class="chat-title">Cucuri Chat</h1>
-    <div class="chat-header-actions">
-      <button id="adminToggle" class="admin-btn hidden">Admin</button>
-    </div>
-  </header>
-
-  <div id="authModal" class="modal active">
-    <div class="modal-content">
-      <span class="close" id="closeBtn">&times;</span>
-      
-      <div id="loginTab" class="tab active">
-        <h2>🔑 Einloggen</h2>
-        <input type="text" id="loginUsername" placeholder="Username">
-        <input type="password" id="loginPassword" placeholder="Passwort">
-        <button id="loginBtn">Einloggen</button>
-        <p id="loginError" class="error"></p>
-        <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cucuri Chat</title>
+    <link rel="icon" href="favicon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <header class="chat-header">
+      <h1 class="chat-title">Cucuri Chat</h1>
+      <div class="chat-header-actions">
+        <button id="adminToggle" class="admin-btn hidden">Admin</button>
+        <button id="voiceChatBtn" class="admin-btn">🎙️ Voice</button>
       </div>
+    </header>
 
-      <div id="registerTab" class="tab">
-        <h2>👋 Willkommen! <br>Registrieren</h2>
-        <input type="text" id="regUsername" placeholder="Username">
-        <input type="password" id="regPassword" placeholder="Passwort">
-        <button id="registerBtn">Registrieren</button>
-        <p id="registerError" class="error"></p>
-        <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
-      </div>
-    </div>
-  </div>
+    <div id="authModal" class="modal active">
+      <div class="modal-content">
+        <span class="close" id="closeBtn">&times;</span>
 
-  <div id="chatContainer" class="hidden">
-    <div class="chat-main">
-      <div id="messages"></div>
-      <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Nachricht schreiben..." maxlength="200">
-        <button id="sendBtn">Senden</button>
+        <div id="loginTab" class="tab active">
+          <h2>🔑 Einloggen</h2>
+          <input type="text" id="loginUsername" placeholder="Username" />
+          <input type="password" id="loginPassword" placeholder="Passwort" />
+          <button id="loginBtn">Einloggen</button>
+          <p id="loginError" class="error"></p>
+          <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
+        </div>
+
+        <div id="registerTab" class="tab">
+          <h2>👋 Willkommen! <br />Registrieren</h2>
+          <input type="text" id="regUsername" placeholder="Username" />
+          <input type="password" id="regPassword" placeholder="Passwort" />
+          <button id="registerBtn">Registrieren</button>
+          <p id="registerError" class="error"></p>
+          <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
+        </div>
       </div>
     </div>
-    <div class="sidebar">
-      <h3>Lobby</h3>
-      <ul id="onlineList"></ul>
-    </div>
-  </div>
 
-  <div id="adminPanel" class="admin-panel hidden">
-    <div class="admin-panel-content">
-      <h2>Admin‑Panel</h2>
-      <p class="admin-info">Angemeldet als Admin: <span id="adminName"></span></p>
-
-      <section class="admin-section">
-        <h3>User‑Verwaltung</h3>
-        <div class="admin-row">
-          <input type="text" id="banUsername" placeholder="Username bannen/entbannen">
-          <button id="banBtn">Bann umschalten</button>
+    <div id="chatContainer" class="hidden">
+      <div class="chat-main">
+        <div id="messages"></div>
+        <div class="input-area">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Nachricht schreiben..."
+            maxlength="200"
+          />
+          <button id="sendBtn">Senden</button>
         </div>
-        <div class="admin-row">
-          <input type="text" id="oldName" placeholder="Alter Name">
-          <input type="text" id="newName" placeholder="Neuer Name">
-          <button id="renameBtn">Namen ändern</button>
-        </div>
-      </section>
-
-      <section class="admin-section">
-        <h3>Chat‑Verwaltung</h3>
-        <div class="admin-row">
-          <button id="clearChatBtn" class="danger">Gesamten Chat löschen</button>
-        </div>
-        <p class="admin-hint">Einzelne Nachrichten: als Admin auf Nachricht tippen → löschen.</p>
-      </section>
+      </div>
+      <div class="sidebar">
+        <h3>Lobby</h3>
+        <ul id="onlineList"></ul>
+      </div>
     </div>
-  </div>
 
-  <div id="gamesMenu" class="games-menu">
-    <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
-    <div class="games-list">
-      <a href="https://makeitmeme.com/de/" target="_blank" class="game-btn meme">Make It Meme</a>
-      <a href="https://skribbl.io/" target="_blank" class="game-btn skribbl">Skribbl.io</a>
-      <a href="https://agar.io/" target="_blank" class="game-btn agario">Agar.io</a>
-      <a href="https://openguessr.com/multiplayer" target="_blank" class="game-btn guessr">OpenGuessr</a>
-      <a href="/spiel.html" target="_blank" class="game-btn meinspiel">🎮 Mein Spiel</a>
-      <a href="/Jugendwort/index.html" target="_blank" class="game-btn jugendwort">🗳 Jugendwort Voting</a>
+    <div id="adminPanel" class="admin-panel hidden">
+      <div class="admin-panel-content">
+        <h2>Admin‑Panel</h2>
+        <p class="admin-info">
+          Angemeldet als Admin: <span id="adminName"></span>
+        </p>
+
+        <section class="admin-section">
+          <h3>User‑Verwaltung</h3>
+          <div class="admin-row">
+            <input
+              type="text"
+              id="banUsername"
+              placeholder="Username bannen/entbannen"
+            />
+            <button id="banBtn">Bann umschalten</button>
+          </div>
+          <div class="admin-row">
+            <input type="text" id="oldName" placeholder="Alter Name" />
+            <input type="text" id="newName" placeholder="Neuer Name" />
+            <button id="renameBtn">Namen ändern</button>
+          </div>
+        </section>
+
+        <section class="admin-section">
+          <h3>Chat‑Verwaltung</h3>
+          <div class="admin-row">
+            <button id="clearChatBtn" class="danger">
+              Gesamten Chat löschen
+            </button>
+          </div>
+          <p class="admin-hint">
+            Einzelne Nachrichten: als Admin auf Nachricht tippen → löschen.
+          </p>
+        </section>
+      </div>
     </div>
-  </div>
 
-  <script src="script.js"></script>
-</body>
+    <div id="gamesMenu" class="games-menu">
+      <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
+      <div class="games-list">
+        <a
+          href="https://makeitmeme.com/de/"
+          target="_blank"
+          class="game-btn meme"
+          >Make It Meme</a
+        >
+        <a href="https://skribbl.io/" target="_blank" class="game-btn skribbl"
+          >Skribbl.io</a
+        >
+        <a href="https://agar.io/" target="_blank" class="game-btn agario"
+          >Agar.io</a
+        >
+        <a
+          href="https://openguessr.com/multiplayer"
+          target="_blank"
+          class="game-btn guessr"
+          >OpenGuessr</a
+        >
+        <a href="/spiel.html" target="_blank" class="game-btn meinspiel"
+          >🎮 Mein Spiel</a
+        >
+        <a
+          href="/Jugendwort/index.html"
+          target="_blank"
+          class="game-btn jugendwort"
+          >🗳 Jugendwort Voting</a
+        >
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
 </html>

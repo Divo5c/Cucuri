@@ -1,9 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-html, body {
-  font-family: 'Orbitron', sans-serif;
+html,
+body {
+  font-family: "Orbitron", sans-serif;
   height: 100dvh;
   background: #3a2e1d;
   overflow: hidden;
@@ -17,38 +22,43 @@ html, body {
   width: 90vw;
   height: 80dvh;
   max-width: 1200px;
-  background: rgba(0,0,0,0.5);
-  border: 4px solid #FFD700;
+  background: rgba(0, 0, 0, 0.5);
+  border: 4px solid #ffd700;
   border-radius: 10px;
   overflow: hidden;
   margin-top: 60px;
 }
 
-.chat-main { flex: 1; display: flex; flex-direction: column; height: 100%; }
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
 #messages {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  background-image: url('images/cucuri-format-3.jpg');
+  background-image: url("images/cucuri-format-3.jpg");
   background-size: cover;
   background-position: center;
   position: relative;
 }
 
 #messages::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 0;
 }
 
 .message {
   margin-bottom: 15px;
   padding: 10px 15px;
-  background: rgba(255,255,255,0.1);
-  border-left: 4px solid #00FF88;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #00ff88;
   border-radius: 8px;
   color: white;
   position: relative;
@@ -58,27 +68,44 @@ html, body {
   word-wrap: break-word;
 }
 
-.message strong { color: #FFD700; }
-.message time { color: #aaa; font-size: 0.8em; margin-left: 10px; }
+.message strong {
+  color: #ffd700;
+}
+.message time {
+  color: #aaa;
+  font-size: 0.8em;
+  margin-left: 10px;
+}
 
 .sidebar {
   width: 250px;
   background: #2a2a2a;
-  border-left: 4px solid #FFD700;
+  border-left: 4px solid #ffd700;
   padding: 20px;
   color: white;
   overflow-y: auto;
 }
 
-.sidebar h3 { color: #00FF88; margin-bottom: 15px; text-align: center; }
-#onlineList { list-style: none; }
-#onlineList li { padding: 8px; margin-bottom: 5px; border-radius: 5px; font-weight: bold;}
+.sidebar h3 {
+  color: #00ff88;
+  margin-bottom: 15px;
+  text-align: center;
+}
+#onlineList {
+  list-style: none;
+}
+#onlineList li {
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  font-weight: bold;
+}
 
 .input-area {
   display: flex;
   padding: 15px;
   background: #222;
-  border-top: 4px solid #FFD700;
+  border-top: 4px solid #ffd700;
   z-index: 2;
   flex-shrink: 0;
 }
@@ -86,37 +113,97 @@ html, body {
 #messageInput {
   flex: 1;
   padding: 12px;
-  border: 2px solid #FFD700;
+  border: 2px solid #ffd700;
   border-radius: 5px;
   background: #fff;
-  font-family: 'Orbitron', sans-serif;
+  font-family: "Orbitron", sans-serif;
   font-size: 16px;
 }
 
 #sendBtn {
   padding: 12px 20px;
   margin-left: 10px;
-  background: #00FF88;
+  background: #00ff88;
   border: none;
   border-radius: 5px;
-  font-family: 'Orbitron', sans-serif;
+  font-family: "Orbitron", sans-serif;
   font-weight: bold;
   cursor: pointer;
   color: black;
 }
 
 /* Modal Styling */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
-.modal.active { display: flex; }
-.modal-content { background: #f4f4f4; padding: 30px; border-radius: 15px; width: 350px; position: relative; text-align: center; }
-.close { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: black;}
-.tab { display: none; }
-.tab.active { display: block; }
-.modal-content input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #FFD700; border-radius: 5px; background: #eef5ff; font-family: 'Orbitron', sans-serif; font-size: 16px; }
-.modal-content button { width: 100%; padding: 12px; background: #00FF88; border: 2px solid #FFD700; border-radius: 5px; font-family: 'Orbitron', sans-serif; font-weight: bold; cursor: pointer; margin-top: 10px; color: black; }
-.error { color: red; margin-top: 10px; font-size: 14px; }
-.modal-content a { display: block; margin-top: 15px; color: #551A8B; text-decoration: none; font-size: 14px;}
-.hidden { display: none !important; }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal.active {
+  display: flex;
+}
+.modal-content {
+  background: #f4f4f4;
+  padding: 30px;
+  border-radius: 15px;
+  width: 350px;
+  position: relative;
+  text-align: center;
+}
+.close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: black;
+}
+.tab {
+  display: none;
+}
+.tab.active {
+  display: block;
+}
+.modal-content input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 2px solid #ffd700;
+  border-radius: 5px;
+  background: #eef5ff;
+  font-family: "Orbitron", sans-serif;
+  font-size: 16px;
+}
+.modal-content button {
+  width: 100%;
+  padding: 12px;
+  background: #00ff88;
+  border: 2px solid #ffd700;
+  border-radius: 5px;
+  font-family: "Orbitron", sans-serif;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  color: black;
+}
+.error {
+  color: red;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.modal-content a {
+  display: block;
+  margin-top: 15px;
+  color: #551a8b;
+  text-decoration: none;
+  font-size: 14px;
+}
+.hidden {
+  display: none !important;
+}
 
 /* GAMES MENÜ */
 .games-menu {
@@ -135,9 +222,9 @@ html, body {
 }
 
 .games-list {
-  background: rgba(0,0,0,0.8);
+  background: rgba(0, 0, 0, 0.8);
   padding: 15px;
-  border: 3px solid #FFD700;
+  border: 3px solid #ffd700;
   border-left: none;
   border-radius: 0 15px 15px 0;
   display: flex;
@@ -146,8 +233,8 @@ html, body {
 }
 
 .toggle-btn {
-  background: #FFD700;
-  border: 3px solid #4A4A4A;
+  background: #ffd700;
+  border: 3px solid #4a4a4a;
   border-left: none;
   padding: 15px 10px;
   font-size: 20px;
@@ -155,7 +242,7 @@ html, body {
   border-radius: 0 10px 10px 0;
   position: absolute;
   right: -45px;
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
 }
 
 .game-btn {
@@ -169,39 +256,37 @@ html, body {
   font-size: 14px;
   transition: transform 0.2s;
 }
-.game-btn:hover { transform: scale(1.05); }
-
-.meme { background: #FF4500; border-color: #FF8C00; }
-.skribbl { background: #1E90FF; border-color: #00BFFF; }
-.agario { background: #32CD32; border-color: #00FF00; }
-.guessr { background: #8A2BE2; border-color: #9370DB; }
-.meinspiel { background: #FF1493; border-color: #FF69B4; }
-.jugendwort { background: #FFD700; border-color: #00FF88; color: black; }
-
-/* Mobile */
-@media screen and (max-width: 768px) {
-  html, body { height: 100dvh; position: relative; }
-  .modal-content { width: 90vw; padding: 20px 15px; }
-  .modal-content h2 { font-size: 1.5rem; }
-  
-  #chatContainer { width: 100vw; height: calc(100dvh - 60px); border: none; border-radius: 0; flex-direction: column; margin-top: 60px; }
-  
-  .sidebar { width: 100%; height: auto; max-height: 80px; border-left: none; border-bottom: 2px solid #FFD700; order: -1; padding: 10px; display: flex; flex-direction: column; flex-shrink: 0; }
-  #onlineList { display: flex; flex-wrap: wrap; gap: 10px; overflow-y: auto; }
-  #onlineList li { margin-bottom: 0; padding: 3px 8px; font-size: 0.8rem; }
-  .sidebar h3 { margin-bottom: 5px; font-size: 0.9rem; text-align: left; }
-  
-  .message { max-width: 95%; font-size: 0.9rem; }
-  .input-area { padding: 10px; }
-  #messageInput { padding: 10px; font-size: 16px; }
-  #sendBtn { padding: 10px 15px; font-size: 14px; }
-
-  .games-list { padding: 10px; gap: 8px; }
-  .game-btn { font-size: 12px; padding: 8px 10px; }
-  .toggle-btn { padding: 10px 5px; right: -35px; }
+.game-btn:hover {
+  transform: scale(1.05);
 }
 
-/* ====== Chat Header & Admin ====== */
+.meme {
+  background: #ff4500;
+  border-color: #ff8c00;
+}
+.skribbl {
+  background: #1e90ff;
+  border-color: #00bfff;
+}
+.agario {
+  background: #32cd32;
+  border-color: #00ff00;
+}
+.guessr {
+  background: #8a2be2;
+  border-color: #9370db;
+}
+.meinspiel {
+  background: #ff1493;
+  border-color: #ff69b4;
+}
+.jugendwort {
+  background: #ffd700;
+  border-color: #00ff88;
+  color: black;
+}
+
+/* ====== Chat Header & Admin + Voice ====== */
 .chat-header {
   position: fixed;
   top: 0;
@@ -209,7 +294,7 @@ html, body {
   right: 0;
   height: 50px;
   background: #111827;
-  border-bottom: 3px solid #FFD700;
+  border-bottom: 3px solid #ffd700;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -218,7 +303,7 @@ html, body {
 }
 
 .chat-title {
-  color: #FFD700;
+  color: #ffd700;
   font-size: 1rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -231,29 +316,50 @@ html, body {
 }
 
 .admin-btn {
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
-  border: 2px solid #FFD700;
+  border: 2px solid #ffd700;
   background: transparent;
-  color: #FFD700;
-  font-family: 'Orbitron', sans-serif;
+  color: #ffd700;
+  font-family: "Orbitron", sans-serif;
   font-size: 0.8rem;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+  transform: scale(1.05);
 }
 
 .admin-btn.active {
-  background: #FFD700;
+  background: #ffd700;
   color: #000;
 }
 
+/* Spezieller Voice Button - etwas auffälliger */
+#voiceChatBtn {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-weight: bold;
+  border: 2px solid #00ff88;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+#voiceChatBtn:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+  transform: scale(1.08);
+}
+
+/* Admin Panel & andere bestehende Styles (unverändert) */
 .admin-panel {
   position: fixed;
   top: 55px;
   right: 10px;
   width: 320px;
   max-width: 90vw;
-  background: rgba(0,0,0,0.9);
-  border: 2px solid #FFD700;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid #ffd700;
   border-radius: 10px;
   padding: 12px;
   color: #fff;
@@ -272,7 +378,7 @@ html, body {
 .admin-section h3 {
   font-size: 0.9rem;
   margin-bottom: 0.25rem;
-  color: #00FF88;
+  color: #00ff88;
 }
 
 .admin-row {
@@ -286,20 +392,20 @@ html, body {
   flex: 1 1 45%;
   padding: 6px;
   border-radius: 5px;
-  border: 1px solid #FFD700;
+  border: 1px solid #ffd700;
   background: #111827;
   color: #fff;
-  font-family: 'Orbitron', sans-serif;
+  font-family: "Orbitron", sans-serif;
   font-size: 0.8rem;
 }
 
 .admin-row button {
   padding: 6px 10px;
   border-radius: 5px;
-  border: 1px solid #FFD700;
-  background: #00FF88;
+  border: 1px solid #ffd700;
+  background: #00ff88;
   color: #000;
-  font-family: 'Orbitron', sans-serif;
+  font-family: "Orbitron", sans-serif;
   font-size: 0.8rem;
   cursor: pointer;
 }
@@ -335,4 +441,93 @@ html, body {
   font-size: 0.7rem;
   color: #ff4b4b;
   opacity: 0.8;
+}
+
+/* Mobile */
+@media screen and (max-width: 768px) {
+  html,
+  body {
+    height: 100dvh;
+    position: relative;
+  }
+  .modal-content {
+    width: 90vw;
+    padding: 20px 15px;
+  }
+  .modal-content h2 {
+    font-size: 1.5rem;
+  }
+
+  #chatContainer {
+    width: 100vw;
+    height: calc(100dvh - 60px);
+    border: none;
+    border-radius: 0;
+    flex-direction: column;
+    margin-top: 60px;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    max-height: 80px;
+    border-left: none;
+    border-bottom: 2px solid #ffd700;
+    order: -1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  #onlineList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    overflow-y: auto;
+  }
+  #onlineList li {
+    margin-bottom: 0;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
+  .sidebar h3 {
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    text-align: left;
+  }
+
+  .message {
+    max-width: 95%;
+    font-size: 0.9rem;
+  }
+  .input-area {
+    padding: 10px;
+  }
+  #messageInput {
+    padding: 10px;
+    font-size: 16px;
+  }
+  #sendBtn {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+
+  .games-list {
+    padding: 10px;
+    gap: 8px;
+  }
+  .game-btn {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  .toggle-btn {
+    padding: 10px 5px;
+    right: -35px;
+  }
+
+  /* Voice Button auf Handy etwas größer */
+  .admin-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
 }
