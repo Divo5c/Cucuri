@@ -21,8 +21,6 @@
     <!-- Login / Register Modal -->
     <div id="authModal" class="modal active">
       <div class="modal-content">
-        <!-- Close-X entfernt -->
-
         <div id="loginTab" class="tab active">
           <h2>🔑 Einloggen</h2>
           <input type="text" id="loginUsername" placeholder="Username" />
@@ -74,13 +72,13 @@
         </div>
       </div>
 
-      <!-- Lobby-Sidebar (einmal!) -->
+      <!-- Lobby-Sidebar -->
       <div class="sidebar">
         <h3>Lobby</h3>
         <ul id="onlineList"></ul>
       </div>
 
-      <!-- Rechte Mini-Voice-Sidebar -->
+      <!-- Rechte Mini-Voice-Sidebar (Desktop) -->
       <aside id="voiceSidebar" class="voice-sidebar">
         <div class="voice-header-mini">
           <span class="voice-title-mini">🎙 Voice</span>
@@ -172,6 +170,24 @@
 
     <!-- Mobiler Voice-Toggle-Button -->
     <button id="voiceMobileToggle" class="voice-mobile-toggle">🎙</button>
+
+    <!-- Mobiles VC-Panel -->
+    <div id="voicePanelMobile" class="voice-panel-mobile">
+      <div class="voice-panel-header">
+        <h3>Voice</h3>
+        <div class="voice-panel-buttons">
+          <button id="voiceMobileJoinBtn" class="voice-panel-btn">Join</button>
+          <button id="voiceMobileMuteBtn" class="voice-panel-btn">Mute</button>
+          <button id="voiceMobileLeaveBtn" class="voice-panel-btn danger">
+            Leave
+          </button>
+        </div>
+      </div>
+      <div id="voicePanelStatus" class="voice-panel-status">
+        Nicht verbunden
+      </div>
+      <ul id="voicePanelUsers" class="voice-panel-users"></ul>
+    </div>
 
     <script src="script.js"></script>
   </body>

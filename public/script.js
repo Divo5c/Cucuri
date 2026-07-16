@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const switchToLogin = getEl("switchToLogin");
   const switchToRegister = getEl("switchToRegister");
-  const closeBtn = getEl("closeBtn"); // existiert im HTML nicht mehr, stört aber nicht
+  const closeBtn = getEl("closeBtn");
 
   const messages = getEl("messages");
   const messageInput = getEl("messageInput");
@@ -40,15 +40,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const renameBtn = getEl("renameBtn");
   const clearChatBtn = getEl("clearChatBtn");
 
-  // Voice-Button
+  // Voice-Button im Header
   const voiceChatBtn = getEl("voiceChatBtn");
 
-  // NEU: Jugendwort-Button + Modal
+  // Jugendwort
   const jugendwortBtn = getEl("jugendwortBtn");
   const jugendwortModal = getEl("jugendwortModal");
   const jwCloseBtn = getEl("jwCloseBtn");
 
-  // Tabs
+  // ========= Auth Tabs =========
+
   if (switchToLogin) {
     switchToLogin.addEventListener("click", (e) => {
       e.preventDefault();
@@ -73,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ==================== REGISTER ====================
+  // ========= REGISTER =========
 
   if (registerBtn) {
     registerBtn.addEventListener("click", () => {
@@ -87,7 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ENTER für Register
   function handleRegisterEnter(e) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ==================== LOGIN ====================
+  // ========= LOGIN =========
 
   if (loginBtn) {
     loginBtn.addEventListener("click", () => {
@@ -136,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ENTER für Login
   function handleLoginEnter(e) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -171,8 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // Jugendwort-Button nur für Divo anzeigen
-    if (username === "Divo" && jugendwortBtn) {
+    // Jugendwort-Button anzeigen
+    if (jugendwortBtn) {
       jugendwortBtn.classList.remove("hidden");
     }
 
@@ -184,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (loginError) loginError.textContent = err;
   });
 
-  // ==================== CHAT-HISTORIE ====================
+  // ========= CHAT-HISTORIE =========
 
   socket.on("loadHistory", (history) => {
     if (!messages) return;
@@ -193,7 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // Nachricht senden
   function sendMessage() {
     const msg = messageInput.value.trim();
     if (msg) {
@@ -209,7 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Nachricht empfangen
   socket.on("chatMessage", (data) => {
     if (!messages) return;
     addMessageToDom(data);
@@ -255,7 +252,6 @@ document.addEventListener("DOMContentLoaded", () => {
     messages.appendChild(div);
   }
 
-  // Nachricht entfernt (von Admin)
   socket.on("adminMessageDeleted", ({ id }) => {
     if (!messages || !id) return;
     const nodes = messages.querySelectorAll(".message");
@@ -266,7 +262,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // User-Liste
+  // ========= User-Liste =========
+
   socket.on("updateUserList", (data) => {
     if (!onlineList) return;
     onlineList.innerHTML = "";
@@ -305,7 +302,8 @@ document.addEventListener("DOMContentLoaded", () => {
     messages.scrollTop = messages.scrollHeight;
   });
 
-  // Games Menü
+  // ========= Games-Menü =========
+
   if (gamesMenu && toggleGamesBtn) {
     if (window.innerWidth <= 768) {
       gamesMenu.classList.add("closed");
@@ -325,7 +323,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Admin-Funktionen
+  // ========= Admin =========
+
   if (banBtn && banUsernameInput) {
     banBtn.addEventListener("click", () => {
       const user = banUsernameInput.value.trim();
@@ -354,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
     alert(data.message || "Admin-Aktion ausgeführt.");
   });
 
-  // ==================== Jugendwort Ergebnis-Modal ====================
+  // ========= Jugendwort-Modal =========
 
   if (jugendwortBtn && jugendwortModal) {
     jugendwortBtn.addEventListener("click", () => {
@@ -368,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ==================== VOICE CHAT INTEGRATION (Mini-Panel) ====================
+  // ========= Mini-Voice-Sidebar (Desktop) =========
 
   const voiceSidebar = document.getElementById("voiceSidebar");
   const voiceCollapseBtn = document.getElementById("voiceCollapseBtn");
@@ -380,8 +379,8 @@ document.addEventListener("DOMContentLoaded", () => {
   );
 
   let vcLocalStream = null;
-  let vcPeers = new Map(); // socketId -> RTCPeerConnection
-  let vcRoomId = "lobby"; // ein fester Standard-Raum
+  let vcPeers = new Map();
+  let vcRoomId = "lobby";
   let vcMuted = false;
 
   const vcIceConfig = {
@@ -425,7 +424,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voiceParticipantsMini) voiceParticipantsMini.innerHTML = "";
   }
 
-  // Sidebar ein-/ausklappen
   if (voiceCollapseBtn && voiceSidebar) {
     voiceCollapseBtn.addEventListener("click", () => {
       voiceSidebar.classList.toggle("collapsed");
@@ -446,10 +444,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function vcJoinRoom() {
-    if (vcLocalStream) {
-      // schon drin
-      return;
-    }
+    if (vcLocalStream) return;
     try {
       await vcStartLocalAudio();
       const currentUser =
@@ -484,12 +479,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        socket.emit("iceCandidate", { targetId: peerSocketId, candidate });
+        socket.emit("iceCandidate", { target: peerSocketId, candidate });
       }
     };
 
     pc.ontrack = (event) => {
-      // Fürs Mini-Widget machen wir nur Audio, kein UI-Element pro Stream
       const audio = new Audio();
       audio.autoplay = true;
       audio.srcObject = event.streams[0];
@@ -519,8 +513,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Signaling (wiederverwendet server.js-Logik)
-
   socket.on("voicePeers", async (peerIds) => {
     const currentUser = localStorage.getItem("cucuri_username") || "Unbekannt";
     vcSetStatus("Verbunden");
@@ -534,7 +526,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      socket.emit("offer", { targetId: peerId, offer });
+      socket.emit("offer", { target: peerId, offer });
     }
   });
 
@@ -543,27 +535,27 @@ document.addEventListener("DOMContentLoaded", () => {
     vcAddParticipant(socketId, username || "User");
   });
 
-  socket.on("offer", async ({ fromId, offer }) => {
-    let pc = vcPeers.get(fromId);
+  socket.on("offer", async ({ from, offer }) => {
+    let pc = vcPeers.get(from);
     if (!pc) {
-      pc = vcCreatePeerConnection(fromId);
-      vcPeers.set(fromId, pc);
+      pc = vcCreatePeerConnection(from);
+      vcPeers.set(from, pc);
     }
     await pc.setRemoteDescription(offer);
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socket.emit("answer", { targetId: fromId, answer });
+    socket.emit("answer", { target: from, answer });
   });
 
-  socket.on("answer", async ({ fromId, answer }) => {
-    const pc = vcPeers.get(fromId);
+  socket.on("answer", async ({ from, answer }) => {
+    const pc = vcPeers.get(from);
     if (pc) {
       await pc.setRemoteDescription(answer);
     }
   });
 
-  socket.on("iceCandidate", async ({ fromId, candidate }) => {
-    const pc = vcPeers.get(fromId);
+  socket.on("iceCandidate", async ({ from, candidate }) => {
+    const pc = vcPeers.get(from);
     if (pc && candidate) {
       await pc.addIceCandidate(candidate);
     }
@@ -580,11 +572,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("beforeunload", vcLeaveRoom);
 
-  // Voice-Button im Header: einfach Sidebar fokussieren
+  // Header-Voice-Button: Sidebar fokussieren
   if (voiceChatBtn && voiceSidebar) {
     voiceChatBtn.addEventListener("click", () => {
       voiceSidebar.classList.remove("collapsed");
       voiceSidebar.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
+  // ========= MOBILES VC-TOGGLE & PANEL =========
+
+  const voiceMobileToggle = document.getElementById("voiceMobileToggle");
+  const voicePanelMobile = document.getElementById("voicePanelMobile");
+  const voiceMobileJoinBtn = document.getElementById("voiceMobileJoinBtn");
+  const voiceMobileMuteBtn = document.getElementById("voiceMobileMuteBtn");
+  const voiceMobileLeaveBtn = document.getElementById("voiceMobileLeaveBtn");
+
+  if (voiceMobileToggle && voicePanelMobile) {
+    voiceMobileToggle.addEventListener("click", () => {
+      voicePanelMobile.classList.toggle("open");
+    });
+  }
+
+  if (voiceMobileJoinBtn) {
+    voiceMobileJoinBtn.addEventListener("click", () => {
+      window.location.href = "/Voice_Chat/voice.html";
+    });
+  }
+
+  if (voiceMobileMuteBtn) {
+    voiceMobileMuteBtn.addEventListener("click", () => {
+      window.location.href = "/Voice_Chat/voice.html";
+    });
+  }
+
+  if (voiceMobileLeaveBtn) {
+    voiceMobileLeaveBtn.addEventListener("click", () => {
+      window.location.href = "/Voice_Chat/voice.html";
     });
   }
 });
