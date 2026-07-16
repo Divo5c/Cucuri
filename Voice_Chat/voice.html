@@ -12,7 +12,6 @@
         <h1>🎙️ Cucuri Voice</h1>
         <div class="voice-controls">
           <button id="toggleMuteBtn" class="voice-btn">🔇 Mute</button>
-          <button id="toggleDeafenBtn" class="voice-btn">🎧 Deafen</button>
           <button id="leaveVoiceBtn" class="voice-btn danger">Verlassen</button>
         </div>
       </header>
@@ -26,7 +25,9 @@
           <!-- Admin only -->
           <div id="adminVoiceControls" class="hidden">
             <input type="text" id="newRoomName" placeholder="Neuer Raum Name" />
-            <button id="createRoomBtn">+ Raum erstellen</button>
+            <button id="createRoomBtn" class="voice-btn">
+              + Raum erstellen
+            </button>
           </div>
         </div>
 

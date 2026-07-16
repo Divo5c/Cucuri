@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
   };
 
-  // Räume vom Server holen (du musst serverseitig getVoiceRooms implementieren, falls noch nicht)
+  // Räume vom Server holen
   socket.emit("getVoiceRooms");
 
   socket.on("voiceRoomsList", (rooms) => renderRooms(rooms));
@@ -86,6 +86,11 @@ document.addEventListener("DOMContentLoaded", () => {
     participantsGrid.innerHTML = "";
     currentRoomId = null;
     voiceStatus.textContent = "Verlassen";
+
+    // alle Remote-Audio-Elemente entfernen
+    document
+      .querySelectorAll("audio[id^='audio-']")
+      .forEach((el) => el.remove());
   }
 
   function addParticipantToUI(nameOrId, isLocal = false) {
@@ -138,7 +143,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pc.ontrack = (event) => {
       console.log("Audio-Stream von", peerSocketId);
-      // hier könntest du z.B. ein <audio> Element pro Peer anlegen
+
+      let audioEl = document.getElementById(`audio-${peerSocketId}`);
+      if (!audioEl) {
+        audioEl = document.createElement("audio");
+        audioEl.id = `audio-${peerSocketId}`;
+        audioEl.autoplay = true;
+        audioEl.playsInline = true;
+        audioEl.style.display = "none";
+        document.body.appendChild(audioEl);
+      }
+
+      const [remoteStream] = event.streams;
+      if (remoteStream) {
+        audioEl.srcObject = remoteStream;
+      }
     };
 
     return pc;
@@ -157,7 +176,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Ein neuer User joint den Raum
+  // Ein neuer User joint den Raum (nur UI, Verbindung kommt über offer/answer)
   socket.on("userJoinedVoice", ({ socketId, username: peerName }) => {
     addParticipantToUI(socketId, false);
   });
@@ -196,6 +215,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const el = document.getElementById(`participant-${socketId}`);
     if (el) el.remove();
+
+    const audioEl = document.getElementById(`audio-${socketId}`);
+    if (audioEl) audioEl.remove();
   });
 
   window.addEventListener("beforeunload", leaveVoiceRoom);
