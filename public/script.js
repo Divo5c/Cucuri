@@ -1,614 +1,70 @@
 document.addEventListener("DOMContentLoaded", () => {
   const socket = io();
+  const $ = (id) => document.getElementById(id);
+  const authModal = $("authModal"), chatContainer = $("chatContainer");
+  const messages = $("messages"), onlineList = $("onlineList");
+  const currentUser = () => localStorage.getItem("cucuri_username");
 
-  const getEl = (id) => document.getElementById(id);
-
-  const authModal = getEl("authModal");
-  const chatContainer = getEl("chatContainer");
-  const registerTab = getEl("registerTab");
-  const loginTab = getEl("loginTab");
-
-  const regUsername = getEl("regUsername");
-  const regPassword = getEl("regPassword");
-  const registerBtn = getEl("registerBtn");
-  const registerError = getEl("registerError");
-
-  const loginUsername = getEl("loginUsername");
-  const loginPassword = getEl("loginPassword");
-  const loginBtn = getEl("loginBtn");
-  const loginError = getEl("loginError");
-
-  const switchToLogin = getEl("switchToLogin");
-  const switchToRegister = getEl("switchToRegister");
-  const closeBtn = getEl("closeBtn");
-
-  const messages = getEl("messages");
-  const messageInput = getEl("messageInput");
-  const sendBtn = getEl("sendBtn");
-  const onlineList = getEl("onlineList");
-
-  const gamesMenu = getEl("gamesMenu");
-  const toggleGamesBtn = getEl("toggleGamesBtn");
-
-  const adminToggle = getEl("adminToggle");
-  const adminPanel = getEl("adminPanel");
-  const adminNameEl = getEl("adminName");
-  const banUsernameInput = getEl("banUsername");
-  const banBtn = getEl("banBtn");
-  const oldNameInput = getEl("oldName");
-  const newNameInput = getEl("newName");
-  const renameBtn = getEl("renameBtn");
-  const clearChatBtn = getEl("clearChatBtn");
-
-  // Voice-Button im Header
-  const voiceChatBtn = getEl("voiceChatBtn");
-
-  // Jugendwort
-  const jugendwortBtn = getEl("jugendwortBtn");
-  const jugendwortModal = getEl("jugendwortModal");
-  const jwCloseBtn = getEl("jwCloseBtn");
-
-  // ========= Auth Tabs =========
-
-  if (switchToLogin) {
-    switchToLogin.addEventListener("click", (e) => {
-      e.preventDefault();
-      registerTab.classList.remove("active");
-      loginTab.classList.add("active");
-      if (registerError) registerError.textContent = "";
-    });
-  }
-
-  if (switchToRegister) {
-    switchToRegister.addEventListener("click", (e) => {
-      e.preventDefault();
-      loginTab.classList.remove("active");
-      registerTab.classList.add("active");
-      if (loginError) loginError.textContent = "";
-    });
-  }
-
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      if (authModal) authModal.classList.remove("active");
-    });
-  }
-
-  // ========= REGISTER =========
-
-  if (registerBtn) {
-    registerBtn.addEventListener("click", () => {
-      const username = regUsername.value.trim();
-      const password = regPassword.value.trim();
-      if (!username || !password) {
-        if (registerError) registerError.textContent = "Bitte alles ausfüllen!";
-        return;
-      }
-      socket.emit("register", { username, password });
-    });
-  }
-
-  function handleRegisterEnter(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (registerBtn) registerBtn.click();
-    }
-  }
-  if (regUsername) regUsername.addEventListener("keydown", handleRegisterEnter);
-  if (regPassword) regPassword.addEventListener("keydown", handleRegisterEnter);
-
-  socket.on("registerSuccess", () => {
-    if (registerError) {
-      registerError.style.color = "green";
-      registerError.textContent = "Erfolgreich! Bitte einloggen.";
-    }
-    setTimeout(() => {
-      if (registerTab && loginTab) {
-        registerTab.classList.remove("active");
-        loginTab.classList.add("active");
-      }
-      if (registerError) {
-        registerError.textContent = "";
-        registerError.style.color = "red";
-      }
-    }, 1500);
-  });
-
-  socket.on("registerError", (err) => {
-    if (registerError) {
-      registerError.style.color = "red";
-      registerError.textContent = err;
-    }
-  });
-
-  // ========= LOGIN =========
-
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      if (loginError) loginError.textContent = "Lade...";
-      const username = loginUsername.value.trim();
-      const password = loginPassword.value.trim();
-      if (!username || !password) {
-        if (loginError) loginError.textContent = "Bitte alles ausfüllen!";
-        return;
-      }
-      socket.emit("login", { username, password });
-    });
-  }
-
-  function handleLoginEnter(e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (loginBtn) loginBtn.click();
-    }
-  }
-  if (loginUsername)
-    loginUsername.addEventListener("keydown", handleLoginEnter);
-  if (loginPassword)
-    loginPassword.addEventListener("keydown", handleLoginEnter);
-
+  function showTab(tab) { ["registerTab", "loginTab"].forEach((id) => $(id)?.classList.toggle("active", id === tab)); }
+  $("switchToLogin")?.addEventListener("click", (e) => { e.preventDefault(); showTab("loginTab"); });
+  $("switchToRegister")?.addEventListener("click", (e) => { e.preventDefault(); showTab("registerTab"); });
+  $("closeBtn")?.addEventListener("click", () => authModal?.classList.remove("active"));
+  $("registerBtn")?.addEventListener("click", () => socket.emit("register", { username: $("regUsername").value.trim(), password: $("regPassword").value.trim() }));
+  $("loginBtn")?.addEventListener("click", () => socket.emit("login", { username: $("loginUsername").value.trim(), password: $("loginPassword").value.trim() }));
+  ["regUsername", "regPassword", "loginUsername", "loginPassword"].forEach((id) => $(id)?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $(id.startsWith("reg") ? "registerBtn" : "loginBtn")?.click(); } }));
+  socket.on("registerSuccess", () => { $("registerError").textContent = "Erfolgreich registriert. Bitte einloggen."; showTab("loginTab"); });
+  socket.on("registerError", (message) => { $("registerError").textContent = message; });
+  socket.on("loginError", (message) => { $("loginError").textContent = message; });
   socket.on("loginSuccess", (username) => {
-    try {
-      localStorage.setItem("cucuri_username", username);
-    } catch {}
-
-    if (authModal) authModal.classList.remove("active");
-    if (chatContainer) {
-      chatContainer.classList.remove("hidden");
-      chatContainer.style.display = "flex";
-    }
-
-    // Admin sichtbar machen, wenn Divo
-    if (username === "Divo" && adminToggle && adminPanel && adminNameEl) {
-      adminToggle.classList.remove("hidden");
-      adminNameEl.textContent = username;
-
-      adminToggle.addEventListener("click", () => {
-        const isHidden = adminPanel.classList.contains("hidden");
-        adminPanel.classList.toggle("hidden", !isHidden);
-        adminToggle.classList.toggle("active", isHidden);
-      });
-    }
-
-    // Jugendwort-Button anzeigen
-    if (jugendwortBtn) {
-      jugendwortBtn.classList.remove("hidden");
-    }
-
-    // Voice Button nach Login anzeigen
-    if (voiceChatBtn) voiceChatBtn.classList.remove("hidden");
+    localStorage.setItem("cucuri_username", username); authModal?.classList.remove("active"); chatContainer?.classList.remove("hidden");
+    if (chatContainer) chatContainer.style.display = "flex";
+    $("voiceChatBtn")?.classList.remove("hidden"); $("jugendwortBtn")?.classList.remove("hidden");
+    if (username === "Divo") $("adminToggle")?.classList.remove("hidden");
   });
-
-  socket.on("loginError", (err) => {
-    if (loginError) loginError.textContent = err;
-  });
-
-  // ========= CHAT-HISTORIE =========
-
-  socket.on("loadHistory", (history) => {
-    if (!messages) return;
-    messages.innerHTML = "";
-    history.forEach((data) => addMessageToDom(data));
-    messages.scrollTop = messages.scrollHeight;
-  });
-
-  function sendMessage() {
-    const msg = messageInput.value.trim();
-    if (msg) {
-      socket.emit("chatMessage", msg);
-      messageInput.value = "";
-    }
-  }
-
-  if (sendBtn) sendBtn.addEventListener("click", sendMessage);
-  if (messageInput) {
-    messageInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") sendMessage();
-    });
-  }
-
-  socket.on("chatMessage", (data) => {
-    if (!messages) return;
-    addMessageToDom(data);
-    messages.scrollTop = messages.scrollHeight;
-  });
-
-  function addMessageToDom(data) {
-    if (!messages) return;
-    const div = document.createElement("div");
-    div.classList.add("message");
-    div.dataset.id = data._id || "";
-
-    const currentUser = localStorage.getItem("cucuri_username");
-
-    div.innerHTML = `
-      <div class="msg-header">
-        <span class="msg-username">${data.username}</span>
-        <div class="msg-meta">
-          <time class="msg-time">${data.timestamp || ""}</time>
-        </div>
-      </div>
-      <div class="msg-text">${data.msg}</div>
-    `;
-
-    if (currentUser === "Divo" && data._id) {
-      const deleteBtn = document.createElement("button");
-      deleteBtn.classList.add("msg-delete-btn");
-      deleteBtn.innerHTML = "🗑";
-
-      deleteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (confirm("Diese Nachricht löschen?")) {
-          socket.emit("adminDeleteMessage", { id: data._id });
-        }
-      });
-
-      const meta = div.querySelector(".msg-meta");
-      meta.appendChild(deleteBtn);
-
-      div.classList.add("deletable");
-    }
-
-    messages.appendChild(div);
-  }
-
-  socket.on("adminMessageDeleted", ({ id }) => {
-    if (!messages || !id) return;
-    const nodes = messages.querySelectorAll(".message");
-    nodes.forEach((node) => {
-      if (node.dataset.id === id) {
-        node.remove();
-      }
-    });
-  });
-
-  // ========= User-Liste =========
-
-  socket.on("updateUserList", (data) => {
-    if (!onlineList) return;
-    onlineList.innerHTML = "";
-    data.online.forEach((user) => {
-      const li = document.createElement("li");
-      li.innerHTML = `🟢 ${user}`;
-      li.style.background = "rgba(0,255,136,0.2)";
-      onlineList.appendChild(li);
-    });
-    data.offline.forEach((user) => {
-      const li = document.createElement("li");
-      li.innerHTML = `🔴 ${user}`;
-      li.style.background = "rgba(255,0,0,0.2)";
-      li.style.color = "#ccc";
-      onlineList.appendChild(li);
-    });
-  });
-
-  socket.on("userJoined", (username) => {
-    if (!messages) return;
-    const div = document.createElement("div");
-    div.classList.add("message");
-    div.style.color = "#00FF88";
-    div.textContent = `➕ ${username} ist beigetreten`;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  });
-
-  socket.on("userLeft", (username) => {
-    if (!messages) return;
-    const div = document.createElement("div");
-    div.classList.add("message");
-    div.style.color = "#FF4444";
-    div.textContent = `➖ ${username} hat verlassen`;
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
-  });
-
-  // ========= Games-Menü =========
-
-  if (gamesMenu && toggleGamesBtn) {
-    if (window.innerWidth <= 768) {
-      gamesMenu.classList.add("closed");
-    }
-    toggleGamesBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      gamesMenu.classList.toggle("closed");
-    });
-    document.addEventListener("click", (e) => {
-      if (
-        window.innerWidth <= 768 &&
-        !gamesMenu.classList.contains("closed") &&
-        !gamesMenu.contains(e.target)
-      ) {
-        gamesMenu.classList.add("closed");
-      }
-    });
-  }
-
-  // ========= Admin =========
-
-  if (banBtn && banUsernameInput) {
-    banBtn.addEventListener("click", () => {
-      const user = banUsernameInput.value.trim();
-      if (!user) return alert("Username eingeben.");
-      socket.emit("adminToggleBan", { username: user });
-    });
-  }
-
-  if (renameBtn && oldNameInput && newNameInput) {
-    renameBtn.addEventListener("click", () => {
-      const oldName = oldNameInput.value.trim();
-      const newName = newNameInput.value.trim();
-      if (!oldName || !newName) return alert("Beide Felder ausfüllen.");
-      socket.emit("adminRenameUser", { oldName, newName });
-    });
-  }
-
-  if (clearChatBtn) {
-    clearChatBtn.addEventListener("click", () => {
-      if (!confirm("Gesamten Chat wirklich löschen?")) return;
-      socket.emit("adminClearChat");
-    });
-  }
-
-  socket.on("adminActionResult", (data) => {
-    alert(data.message || "Admin-Aktion ausgeführt.");
-  });
-
-  // ========= Jugendwort-Modal =========
-
-  if (jugendwortBtn && jugendwortModal) {
-    jugendwortBtn.addEventListener("click", () => {
-      jugendwortModal.classList.add("active");
-    });
-  }
-
-  if (jwCloseBtn && jugendwortModal) {
-    jwCloseBtn.addEventListener("click", () => {
-      jugendwortModal.classList.remove("active");
-    });
-  }
-
-  // ========= Mini-Voice-Sidebar (Desktop) =========
-
-  const voiceSidebar = document.getElementById("voiceSidebar");
-  const voiceCollapseBtn = document.getElementById("voiceCollapseBtn");
-  const voiceJoinBtn = document.getElementById("voiceJoinBtn");
-  const voiceMuteMiniBtn = document.getElementById("voiceMuteMiniBtn");
-  const voiceStatusMini = document.getElementById("voiceStatusMini");
-  const voiceParticipantsMini = document.getElementById(
-    "voiceParticipantsMini",
-  );
-
-  let vcLocalStream = null;
-  let vcPeers = new Map();
-  let vcRoomId = "lobby";
-  let vcMuted = false;
-
-  const vcIceConfig = {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun1.l.google.com:19302" },
-      { urls: "stun:openrelay.metered.ca:80" },
-    ],
-  };
-
-  function vcSetStatus(text) {
-    if (voiceStatusMini) voiceStatusMini.textContent = text;
-  }
-
-  function vcAddParticipant(id, label, isYou = false) {
-    if (!voiceParticipantsMini) return;
-    const existing = voiceParticipantsMini.querySelector(
-      `[data-vp-id="${id}"]`,
-    );
-    if (existing) return;
-
-    const li = document.createElement("li");
-    li.dataset.vpId = id;
-    li.innerHTML = `
-      <div class="vp-name">
-        <span class="vp-icon">${isYou ? "🎤" : "👤"}</span>
-        <span>${label}</span>
-        ${isYou ? '<span class="vp-you">(Du)</span>' : ""}
-      </div>
-    `;
-    voiceParticipantsMini.appendChild(li);
-  }
-
-  function vcRemoveParticipant(id) {
-    if (!voiceParticipantsMini) return;
-    const el = voiceParticipantsMini.querySelector(`[data-vp-id="${id}"]`);
-    if (el) el.remove();
-  }
-
-  function vcClearParticipants() {
-    if (voiceParticipantsMini) voiceParticipantsMini.innerHTML = "";
-  }
-
-  if (voiceCollapseBtn && voiceSidebar) {
-    voiceCollapseBtn.addEventListener("click", () => {
-      voiceSidebar.classList.toggle("collapsed");
-    });
-  }
-
-  async function vcStartLocalAudio() {
-    vcLocalStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    });
-    vcSetStatus("Mikro aktiv");
-    const currentUser = localStorage.getItem("cucuri_username") || "Du";
-    vcAddParticipant("local", currentUser, true);
-  }
-
-  async function vcJoinRoom() {
-    if (vcLocalStream) return;
-    try {
-      await vcStartLocalAudio();
-      const currentUser =
-        localStorage.getItem("cucuri_username") || "Unbekannt";
-      socket.emit("joinVoiceRoom", { roomId: vcRoomId, username: currentUser });
-      vcSetStatus("Verbinde...");
-    } catch (err) {
-      console.error("VC Mikro Fehler:", err);
-      vcSetStatus("Mikro-Fehler");
-    }
-  }
-
-  async function vcLeaveRoom() {
-    if (vcLocalStream) {
-      vcLocalStream.getTracks().forEach((t) => t.stop());
-      vcLocalStream = null;
-    }
-    vcPeers.forEach((pc) => pc.close());
-    vcPeers.clear();
-    vcClearParticipants();
-    vcSetStatus("Nicht verbunden");
-  }
-
-  function vcCreatePeerConnection(peerSocketId) {
-    const pc = new RTCPeerConnection(vcIceConfig);
-
-    if (vcLocalStream) {
-      vcLocalStream
-        .getTracks()
-        .forEach((track) => pc.addTrack(track, vcLocalStream));
-    }
-
-    pc.onicecandidate = ({ candidate }) => {
-      if (candidate) {
-        socket.emit("iceCandidate", { target: peerSocketId, candidate });
-      }
-    };
-
-    pc.ontrack = (event) => {
-      const audio = new Audio();
-      audio.autoplay = true;
-      audio.srcObject = event.streams[0];
-    };
-
-    return pc;
-  }
-
-  if (voiceJoinBtn) {
-    voiceJoinBtn.addEventListener("click", () => {
-      if (!vcLocalStream) {
-        vcJoinRoom();
-        voiceJoinBtn.textContent = "Leave";
-      } else {
-        vcLeaveRoom();
-        voiceJoinBtn.textContent = "Join Voice";
-      }
-    });
-  }
-
-  if (voiceMuteMiniBtn) {
-    voiceMuteMiniBtn.addEventListener("click", () => {
-      if (!vcLocalStream) return;
-      vcMuted = !vcMuted;
-      vcLocalStream.getAudioTracks().forEach((t) => (t.enabled = !vcMuted));
-      voiceMuteMiniBtn.textContent = vcMuted ? "Unmute" : "Mute";
-    });
-  }
-
-  socket.on("voicePeers", async (peerIds) => {
-    const currentUser = localStorage.getItem("cucuri_username") || "Unbekannt";
-    vcSetStatus("Verbunden");
-    vcAddParticipant("local", currentUser, true);
-
-    for (const peerId of peerIds) {
-      if (!peerId) continue;
-      vcAddParticipant(peerId, "User");
-      const pc = vcCreatePeerConnection(peerId);
-      vcPeers.set(peerId, pc);
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      socket.emit("offer", { target: peerId, offer });
-    }
-  });
-
-  socket.on("userJoinedVoice", ({ socketId, username }) => {
-    if (!socketId) return;
-    vcAddParticipant(socketId, username || "User");
-  });
-
-  socket.on("offer", async ({ from, offer }) => {
-    let pc = vcPeers.get(from);
-    if (!pc) {
-      pc = vcCreatePeerConnection(from);
-      vcPeers.set(from, pc);
-    }
-    await pc.setRemoteDescription(offer);
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    socket.emit("answer", { target: from, answer });
-  });
-
-  socket.on("answer", async ({ from, answer }) => {
-    const pc = vcPeers.get(from);
-    if (pc) {
-      await pc.setRemoteDescription(answer);
-    }
-  });
-
-  socket.on("iceCandidate", async ({ from, candidate }) => {
-    const pc = vcPeers.get(from);
-    if (pc && candidate) {
-      await pc.addIceCandidate(candidate);
-    }
-  });
-
-  socket.on("userLeftVoice", ({ socketId }) => {
-    const pc = vcPeers.get(socketId);
-    if (pc) {
-      pc.close();
-      vcPeers.delete(socketId);
-    }
-    vcRemoveParticipant(socketId);
-  });
-
-  window.addEventListener("beforeunload", vcLeaveRoom);
-
-  // Header-Voice-Button: Sidebar fokussieren
-  if (voiceChatBtn && voiceSidebar) {
-    voiceChatBtn.addEventListener("click", () => {
-      voiceSidebar.classList.remove("collapsed");
-      voiceSidebar.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-  }
-
-  // ========= MOBILES VC-TOGGLE & PANEL =========
-
-  const voiceMobileToggle = document.getElementById("voiceMobileToggle");
-  const voicePanelMobile = document.getElementById("voicePanelMobile");
-  const voiceMobileJoinBtn = document.getElementById("voiceMobileJoinBtn");
-  const voiceMobileMuteBtn = document.getElementById("voiceMobileMuteBtn");
-  const voiceMobileLeaveBtn = document.getElementById("voiceMobileLeaveBtn");
-
-  if (voiceMobileToggle && voicePanelMobile) {
-    voiceMobileToggle.addEventListener("click", () => {
-      voicePanelMobile.classList.toggle("open");
-    });
-  }
-
-  if (voiceMobileJoinBtn) {
-    voiceMobileJoinBtn.addEventListener("click", () => {
-      window.location.href = "/Voice_Chat/voice.html";
-    });
-  }
-
-  if (voiceMobileMuteBtn) {
-    voiceMobileMuteBtn.addEventListener("click", () => {
-      window.location.href = "/Voice_Chat/voice.html";
-    });
-  }
-
-  if (voiceMobileLeaveBtn) {
-    voiceMobileLeaveBtn.addEventListener("click", () => {
-      window.location.href = "/Voice_Chat/voice.html";
-    });
-  }
+  function addMessage(data) { if (!messages) return; const node = document.createElement("div"); node.className = "message"; node.innerHTML = `<div class="msg-header"><span class="msg-username"></span><time class="msg-time"></time></div><div class="msg-text"></div>`; node.querySelector(".msg-username").textContent = data.username; node.querySelector(".msg-time").textContent = data.timestamp || ""; node.querySelector(".msg-text").textContent = data.msg; messages.appendChild(node); }
+  socket.on("loadHistory", (history) => { messages.innerHTML = ""; history.forEach(addMessage); messages.scrollTop = messages.scrollHeight; });
+  socket.on("chatMessage", (data) => { addMessage(data); messages.scrollTop = messages.scrollHeight; });
+  const sendMessage = () => { const input = $("messageInput"); const text = input?.value.trim(); if (text) { socket.emit("chatMessage", text); input.value = ""; } };
+  $("sendBtn")?.addEventListener("click", sendMessage); $("messageInput")?.addEventListener("keydown", (e) => e.key === "Enter" && sendMessage());
+  socket.on("updateUserList", ({ online, offline }) => { if (!onlineList) return; onlineList.innerHTML = ""; [...online.map((name) => [name, true]), ...offline.map((name) => [name, false])].forEach(([name, isOnline]) => { const li = document.createElement("li"); li.textContent = `${isOnline ? "🟢" : "🔴"} ${name}`; onlineList.appendChild(li); }); });
+
+  // Existing navigation and admin controls remain available alongside Voice.
+  const gamesMenu = $("gamesMenu"), toggleGamesBtn = $("toggleGamesBtn");
+  toggleGamesBtn?.addEventListener("click", (event) => { event.stopPropagation(); gamesMenu?.classList.toggle("closed"); });
+  $("adminToggle")?.addEventListener("click", () => $("adminPanel")?.classList.toggle("hidden"));
+  $("banBtn")?.addEventListener("click", () => { const username = $("banUsername")?.value.trim(); if (username) socket.emit("adminToggleBan", { username }); });
+  $("renameBtn")?.addEventListener("click", () => { const oldName = $("oldName")?.value.trim(), newName = $("newName")?.value.trim(); if (oldName && newName) socket.emit("adminRenameUser", { oldName, newName }); });
+  $("clearChatBtn")?.addEventListener("click", () => { if (confirm("Gesamten Chat wirklich löschen?")) socket.emit("adminClearChat"); });
+  socket.on("adminActionResult", ({ message }) => alert(message));
+  const youthModal = $("jugendwortModal");
+  $("jugendwortBtn")?.addEventListener("click", () => youthModal?.classList.add("active"));
+  $("jwCloseBtn")?.addEventListener("click", () => youthModal?.classList.remove("active"));
+
+  // One responsive Voice UI: duplicate markup is only the mobile view of the same state.
+  const desktopVoice = $("voiceSidebar"), mobileVoice = $("voicePanelMobile"), mobileToggle = $("voiceMobileToggle");
+  if (desktopVoice && mobileVoice) mobileVoice.appendChild(desktopVoice.cloneNode(true));
+  const voiceAll = (id) => document.querySelectorAll(`#${id}`);
+  const voiceText = (id, value) => voiceAll(id).forEach((element) => (element.textContent = value));
+  const voiceDisabled = (id, value) => voiceAll(id).forEach((element) => (element.disabled = value));
+  let stream = null, roomId = null, muted = false;
+  const peers = new Map();
+  const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  function setVoiceStatus(text, connected = false) { voiceText("voiceStatus", text); voiceAll("voiceConnectionDot").forEach((dot) => dot.classList.toggle("connected", connected)); }
+  function updateVoiceButtons() { const joined = Boolean(stream); voiceText("voiceJoinBtn", joined ? "Im Voice verbunden" : "Voice beitreten"); voiceText("voiceMuteBtn", muted ? "Mikro aktivieren" : "Mikro stumm"); voiceDisabled("voiceMuteBtn", !joined); voiceDisabled("voiceLeaveBtn", !joined); }
+  function renderMembers(members = []) { const mine = currentUser(); voiceAll("voiceParticipants").forEach((list) => { list.innerHTML = ""; if (!members.length) list.innerHTML = '<li class="voice-members__empty">Noch niemand im Raum</li>'; members.forEach((member) => { const item = document.createElement("li"); item.className = "voice-member"; item.innerHTML = `<span class="voice-member__avatar"></span><span class="voice-member__name"></span>${member.username === mine ? '<span class="voice-member__you">Du</span>' : ""}`; item.querySelector(".voice-member__avatar").textContent = member.username.slice(0, 1).toUpperCase(); item.querySelector(".voice-member__name").textContent = member.username; list.appendChild(item); }); }); voiceText("voiceMemberCount", `${members.length} Teilnehmer`); }
+  function closePeer(id) { peers.get(id)?.close(); peers.delete(id); document.querySelector(`audio[data-voice-peer="${id}"]`)?.remove(); }
+  function peerFor(id) { const peer = new RTCPeerConnection(rtcConfig); stream.getTracks().forEach((track) => peer.addTrack(track, stream)); peer.onicecandidate = ({ candidate }) => candidate && socket.emit("iceCandidate", { targetId: id, candidate }); peer.ontrack = ({ streams }) => { let audio = document.querySelector(`audio[data-voice-peer="${id}"]`); if (!audio) { audio = document.createElement("audio"); audio.autoplay = true; audio.playsInline = true; audio.dataset.voicePeer = id; document.body.appendChild(audio); } audio.srcObject = streams[0]; }; return peer; }
+  async function joinVoice() { if (stream) return; try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); setVoiceStatus("Verbinde mit der Lobby …"); updateVoiceButtons(); socket.emit("getVoiceRooms"); } catch (error) { console.error(error); setVoiceStatus("Mikrofon-Zugriff wurde nicht erlaubt"); } }
+  function leaveVoice() { if (roomId) socket.emit("leaveVoiceRoom"); peers.forEach((_, id) => closePeer(id)); stream?.getTracks().forEach((track) => track.stop()); stream = null; roomId = null; muted = false; setVoiceStatus("Bereit zum Beitreten"); updateVoiceButtons(); renderMembers(); }
+  socket.on("voiceRoomsList", (rooms) => { if (!stream) return; const room = rooms.find((item) => item.isDefault) || rooms[0]; if (!room) return setVoiceStatus("Lobby ist noch nicht verfügbar"); roomId = room._id; socket.emit("joinVoiceRoom", { roomId }); });
+  socket.on("voicePresence", ({ roomId: updatedRoom, members }) => { if (!roomId || updatedRoom === roomId) renderMembers(members); });
+  socket.on("voicePeers", async (ids) => { setVoiceStatus("Mit der Lobby verbunden", true); for (const id of ids) { const peer = peerFor(id); peers.set(id, peer); const offer = await peer.createOffer(); await peer.setLocalDescription(offer); socket.emit("offer", { targetId: id, offer }); } });
+  socket.on("offer", async ({ fromId, offer }) => { if (!stream) return; let peer = peers.get(fromId); if (!peer) { peer = peerFor(fromId); peers.set(fromId, peer); } await peer.setRemoteDescription(offer); const answer = await peer.createAnswer(); await peer.setLocalDescription(answer); socket.emit("answer", { targetId: fromId, answer }); });
+  socket.on("answer", async ({ fromId, answer }) => { const peer = peers.get(fromId); if (peer) await peer.setRemoteDescription(answer); });
+  socket.on("iceCandidate", async ({ fromId, candidate }) => { const peer = peers.get(fromId); if (peer && candidate) await peer.addIceCandidate(candidate); });
+  socket.on("userLeftVoice", ({ socketId }) => closePeer(socketId)); socket.on("voiceError", (message) => { leaveVoice(); setVoiceStatus(message); });
+  document.addEventListener("click", (event) => { const button = event.target.closest("#voiceJoinBtn,#voiceMuteBtn,#voiceLeaveBtn"); if (!button) return; if (button.id === "voiceJoinBtn") joinVoice(); if (button.id === "voiceMuteBtn" && stream) { muted = !muted; stream.getAudioTracks().forEach((track) => (track.enabled = !muted)); updateVoiceButtons(); } if (button.id === "voiceLeaveBtn") leaveVoice(); });
+  mobileToggle?.addEventListener("click", () => { mobileVoice.classList.toggle("open"); mobileVoice.setAttribute("aria-hidden", String(!mobileVoice.classList.contains("open"))); });
+  $("voiceChatBtn")?.addEventListener("click", () => window.innerWidth <= 768 ? mobileToggle?.click() : desktopVoice?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+  window.addEventListener("beforeunload", leaveVoice);
 });

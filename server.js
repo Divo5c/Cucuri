@@ -1,5 +1,3 @@
-const path = require("path");
-
 require("dotenv").config();
 
 const express = require("express");
@@ -15,7 +13,6 @@ const io = socketIo(server, {
 
 // Static
 app.use(express.static("public"));
-app.use("/Voice_Chat", express.static(path.join(__dirname, "Voice_Chat")));
 app.use(express.json());
 
 // ===== MongoDB-Verbindung (Atlas + Mongoose) =====
@@ -86,7 +83,40 @@ async function broadcastUserList() {
   }
 }
 
-async function initDefaultVoiceRooms() {}
+async function initDefaultVoiceRooms() {
+  await VoiceRoom.updateOne(
+    { isDefault: true },
+    { $setOnInsert: { name: "Lobby", createdBy: "system", isDefault: true } },
+    { upsert: true },
+  );
+}
+
+function voiceMembers(roomId) {
+  const memberIds = Array.from(voiceRoomsUsers.get(roomId) || []);
+  return memberIds.map((socketId) => ({
+    socketId,
+    username: io.sockets.sockets.get(socketId)?.data.voiceUsername || "Unbekannt",
+  }));
+}
+
+function broadcastVoicePresence(roomId) {
+  io.emit("voicePresence", { roomId, members: voiceMembers(roomId) });
+}
+
+function leaveVoiceRoom(socket) {
+  const roomId = socket.data.voiceRoomId;
+  if (!roomId || !voiceRoomsUsers.has(roomId)) return;
+
+  const members = voiceRoomsUsers.get(roomId);
+  members.delete(socket.id);
+  socket.leave(`voice-${roomId}`);
+  socket.to(`voice-${roomId}`).emit("userLeftVoice", { socketId: socket.id });
+
+  if (members.size === 0) voiceRoomsUsers.delete(roomId);
+  delete socket.data.voiceRoomId;
+  delete socket.data.voiceUsername;
+  broadcastVoicePresence(roomId);
+}
 
 // ===== Jugendwort Voting API =====
 
@@ -412,8 +442,20 @@ io.on("connection", (socket) => {
   });
 
   // ===== VOICE SIGNALING (WebRTC) =====
-  socket.on("joinVoiceRoom", ({ roomId, username }) => {
+  socket.on("getVoiceRooms", async () => {
+    const rooms = await VoiceRoom.find().sort({ isDefault: -1, createdAt: 1 }).lean();
+    socket.emit("voiceRoomsList", rooms);
+  });
+
+  socket.on("joinVoiceRoom", async ({ roomId }) => {
+    const username = sessions.get(socket.id);
     if (!roomId || !username) return;
+
+    const room = await VoiceRoom.findById(roomId).lean();
+    if (!room) return socket.emit("voiceError", "Der Voice-Raum wurde nicht gefunden.");
+
+    if (socket.data.voiceRoomId === roomId) return;
+    leaveVoiceRoom(socket);
 
     socket.data.voiceRoomId = roomId;
     socket.data.voiceUsername = username;
@@ -434,7 +476,10 @@ io.on("connection", (socket) => {
       socketId: socket.id,
       username,
     });
+    broadcastVoicePresence(roomId);
   });
+
+  socket.on("leaveVoiceRoom", () => leaveVoiceRoom(socket));
 
   socket.on("offer", ({ targetId, offer }) => {
     io.to(targetId).emit("offer", { fromId: socket.id, offer });
@@ -452,20 +497,7 @@ io.on("connection", (socket) => {
     const username = sessions.get(socket.id);
 
     // Voice‑Cleanup
-    const roomId = socket.data.voiceRoomId;
-    if (roomId && voiceRoomsUsers.has(roomId)) {
-      const set = voiceRoomsUsers.get(roomId);
-      if (set.has(socket.id)) {
-        set.delete(socket.id);
-        io.to(`voice-${roomId}`).emit("userLeftVoice", {
-          socketId: socket.id,
-          username: socket.data.voiceUsername || username || "Unbekannt",
-        });
-      }
-      if (set.size === 0) {
-        voiceRoomsUsers.delete(roomId);
-      }
-    }
+    leaveVoiceRoom(socket);
 
     // Chat‑Sessions wie bisher
     if (username) {

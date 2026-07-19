@@ -78,26 +78,20 @@
         <ul id="onlineList"></ul>
       </div>
 
-      <!-- Rechte Mini-Voice-Sidebar (Desktop) -->
-      <aside id="voiceSidebar" class="voice-sidebar">
-        <div class="voice-header-mini">
-          <span class="voice-title-mini">🎙 Voice</span>
-          <button id="voiceCollapseBtn" class="voice-collapse-btn">⮜</button>
+      <aside id="voiceSidebar" class="voice-panel" aria-label="Voice Chat">
+        <div class="voice-panel__heading">
+          <div><span class="voice-panel__eyebrow">LIVE AUDIO</span><h2>Voice Lobby</h2></div>
+          <span id="voiceConnectionDot" class="voice-dot" aria-label="Nicht verbunden"></span>
         </div>
-
-        <div class="voice-body-mini">
-          <div class="voice-status-line">
-            <span id="voiceStatusMini">Nicht verbunden</span>
-          </div>
-
-          <div class="voice-controls-mini">
-            <button id="voiceJoinBtn" class="voice-btn-mini">Join Voice</button>
-            <button id="voiceMuteMiniBtn" class="voice-btn-mini">Mute</button>
-          </div>
-
-          <h4 class="voice-participants-title">Im Voice:</h4>
-          <ul id="voiceParticipantsMini" class="voice-participants-list"></ul>
+        <p id="voiceStatus" class="voice-panel__status">Bereit zum Beitreten</p>
+        <div class="voice-panel__room"><span>🎙</span><div><strong>Lobby</strong><small id="voiceMemberCount">0 Teilnehmer</small></div></div>
+        <div class="voice-panel__actions">
+          <button id="voiceJoinBtn" class="voice-action voice-action--primary">Voice beitreten</button>
+          <button id="voiceMuteBtn" class="voice-action" disabled>Mikro stumm</button>
+          <button id="voiceLeaveBtn" class="voice-action voice-action--danger" disabled>Verlassen</button>
         </div>
+        <h3 class="voice-panel__members-title">Im Raum</h3>
+        <ul id="voiceParticipants" class="voice-members"><li class="voice-members__empty">Noch niemand im Raum</li></ul>
       </aside>
     </div>
 
@@ -169,25 +163,10 @@
     </div>
 
     <!-- Mobiler Voice-Toggle-Button -->
-    <button id="voiceMobileToggle" class="voice-mobile-toggle">🎙</button>
+    <button id="voiceMobileToggle" class="voice-mobile-toggle" aria-label="Voice-Chat öffnen">🎙 VC</button>
 
     <!-- Mobiles VC-Panel -->
-    <div id="voicePanelMobile" class="voice-panel-mobile">
-      <div class="voice-panel-header">
-        <h3>Voice</h3>
-        <div class="voice-panel-buttons">
-          <button id="voiceMobileJoinBtn" class="voice-panel-btn">Join</button>
-          <button id="voiceMobileMuteBtn" class="voice-panel-btn">Mute</button>
-          <button id="voiceMobileLeaveBtn" class="voice-panel-btn danger">
-            Leave
-          </button>
-        </div>
-      </div>
-      <div id="voicePanelStatus" class="voice-panel-status">
-        Nicht verbunden
-      </div>
-      <ul id="voicePanelUsers" class="voice-panel-users"></ul>
-    </div>
+    <div id="voicePanelMobile" class="voice-panel-mobile" aria-hidden="true"></div>
 
     <script src="script.js"></script>
   </body>
