@@ -1,0 +1,281 @@
+SPACEEDU — WEBSITE DESIGN SPEC FOR AI IMPLEMENTATION
+=====================================================
+FILE: SpaceEdu-Design-Spec.txt | ENCODING: UTF-8 | FORMAT: plain text, deterministic
+GOAL: Any AI reading ONLY this file must be able to re-create the website pixel-faithfully.
+OUTPUT: One single self-contained file `index.html`. No build step. No frameworks. No external JS.
+
+--------------------------------------------------------------------------------
+0. HOW TO READ THIS FILE
+--------------------------------------------------------------------------------
+- Section numbers are stable. Implement in order 1..13.
+- `calc(N * var(--u))` means literal CSS `calc(<N> * var(--u))`. Never substitute px.
+- "EXACT" means byte-for-byte copy unless noted.
+- All lengths for hero MUST use var(--u). New sections also use var(--u).
+- Source order matters for responsive tiers (Sec.8) and animations.
+
+--------------------------------------------------------------------------------
+1. CONCEPT
+--------------------------------------------------------------------------------
+Site: "SpaceEdu". Space-themed education marketing site.
+Viewport 1 = cinematic full-viewport hero:
+- Looping silent video of ONE planet fills viewport (background).
+- Centered over it: eyebrow "PLANET", huge serif planet name, short cyan rule,
+  paragraph (lede), glossy white pill button "GET STARTED".
+- Flanking button, cropped by left/right screen edges: two transparent planet
+  cut-outs (2048px PNG w/ alpha) with serif labels.
+- Planets: EARTH, VENUS, MARS. Exactly one "featured" (background clip + headline).
+  Other two fill LEFT and RIGHT slots. Clicking side planet features it; slots
+  refill with other two. Earth featured on load. Fully reversible:
+  earth->[venus,mars], venus->[earth,mars], mars->[earth,venus], back to start.
+Below hero (same file, scrollable page):
+- #planets: 3 cards (EARTH/VENUS/MARS) with still image, copy, [Feature X] + [Join].
+- #tuition (keep nav spelling "Tution"): 3 pricing cards Flyby $19 / Orbit $49 / Mission $99.
+- #tutorials: 4 numbered lessons (01..04).
+- #blog: 3 posts with dates.
+- #enroll: two-column box: copy + form (name,email,track) + note; footer with logo/links/copyright.
+Scroll button in hero scrolls to #planets. Card [Feature X] calls hero show(X) then scrolls to top.
+
+--------------------------------------------------------------------------------
+2. TECH CONSTRAINTS
+--------------------------------------------------------------------------------
+- DOCTYPE html, <html lang="en">, charset UTF-8, viewport width=device-width,initial-scale=1.
+- <head> contains: meta description, theme-color #04101f, OG tags, favicon (Sec.3),
+  Google Fonts links (Sec.4), ONE blocking inline <script> (Sec.9) BEFORE stylesheet,
+  ONE <style> block with ALL CSS.
+- <body> contains: .stage hero + <main class="sections"> + ONE <script> before </body> with ALL JS.
+- No external JS files. Only external URLs: Google Fonts CSS + CloudFront assets.
+- html{scroll-behavior:smooth} + @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}.
+
+--------------------------------------------------------------------------------
+3. ASSETS — EXACT URLS, DO NOT CHANGE
+--------------------------------------------------------------------------------
+CLIPS (10s,16:9,1276x720,silent,loop):
+EARTH_CLIP=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202422_3ffb4889-c520-432d-8458-038009eb40df.mp4
+VENUS_CLIP=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202422_b211cd74-013b-4dd3-bfd0-64491d8696fa.mp4
+MARS_CLIP =https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202422_51eae59a-2459-4c84-907c-cc5edfe5fea7.mp4
+STILLS (poster + .sky fallback):
+EARTH_STILL=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202133_508c64b8-a31e-4290-bdfc-1187df70e0a6.png
+VENUS_STILL=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202133_cf55d1d8-7b59-4a64-80da-d72052ae974e.png
+MARS_STILL =https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202133_0ba6de7c-285d-43dc-b7ab-8c54c73707cb.png
+CUTOUTS (2048x2048 PNG alpha, side slots):
+EARTH_CUT=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202005_3346cc4d-ec3b-44ab-825c-b18e49f5021a.png
+VENUS_CUT=https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202012_640b239a-d08a-4200-adb2-741bbe129ac8.png
+MARS_CUT =https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260827_202018_3d559490-f613-4ed7-a3bb-3b7e9fc90fb8.png
+FAVICON: <link rel="icon" type="image/png" href="{EARTH_CUT}">
+CARDS reuse STILLS as <img src>. OG image = EARTH_STILL.
+
+--------------------------------------------------------------------------------
+4. FONTS
+--------------------------------------------------------------------------------
+In <head> EXACT:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Poppins:wght@500;600&family=Prata&display=swap" rel="stylesheet">
+Tokens:
+--font-serif:'Prata',Georgia,serif
+--font-body:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif
+--font-logo:'Poppins',sans-serif
+Use: body=--font-body; h1.title + .label + section h2/card h3=--font-serif (cards/pricing use serif for h3/price); .logo=--font-logo.
+
+--------------------------------------------------------------------------------
+5. DESIGN TOKENS + --u SYSTEM
+--------------------------------------------------------------------------------
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+ --dw:1353; --dh:1163; --gutter:25;
+ --u:max(min(.72px, calc(100vh / 700)), min(calc(100vw / 1353), calc(100vh / 1163)));
+ --dh-px:calc(1163 * var(--u));
+ --vshift:calc(max(0px, (100vh - var(--dh-px))) * .42);
+ --ink:#ffffff; --cyan:#79dce8; --cyan-logo:#5fd0e1;
+ --rule:rgba(255,255,255,.23); --btn-ink:#071227;
+}
+@supports (height:100dvh){:root{
+ --u:max(min(.72px, calc(100dvh / 700)), min(calc(100vw / 1353), calc(100dvh / 1163)));
+ --vshift:calc(max(0px, (100dvh - var(--dh-px))) * .42);}}
+html,body{height:100%}
+body{background:#04101f;color:var(--ink);font-family:var(--font-body);
+ -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+ text-rendering:geometricPrecision;overflow-x:hidden;overflow-y:auto;min-height:100%}
+--vshift pushes .copy down on taller viewports (.42 factor). --gutter offsets .col right
+so optical center x=664 not 676.
+RULE: every px length = calc(N * var(--u)). 0, %, vw/vh, em for type-mask only (.18em) allowed.
+
+--------------------------------------------------------------------------------
+6. MARKUP — EXACT DOM
+--------------------------------------------------------------------------------
+<div class="stage">           /* relative; width:100%; height:100vh; height:100dvh; min-height:calc(560*u); overflow:hidden; isolation:isolate */
+ <div class="sky">            /* absolute; inset:0; z-index:0; bg-image EARTH_STILL cover center no-repeat */
+  <video data-planet="earth" class="is-active" autoplay muted loop playsinline preload="auto" src="{EARTH_CLIP}" poster="{EARTH_STILL}" aria-hidden="true"></video>
+  <video data-planet="venus" muted loop playsinline preload="none" data-src="{VENUS_CLIP}" poster="{VENUS_STILL}" aria-hidden="true"></video>
+  <video data-planet="mars"  muted loop playsinline preload="none" data-src="{MARS_CLIP}"  poster="{MARS_STILL}"  aria-hidden="true"></video>
+ </div>
+ <div class="ui">             /* absolute; inset:0; z-index:3 */
+  <header class="navbar"><div class="navrow" data-open="false">
+   <a class="logo" href="#">space<i>edu</i></a>
+   <nav class="links" id="site-nav">
+    <a href="#planets" aria-current="page">Planets</a>
+    <a href="#tuition">Tution</a>  <!-- KEEP spelling -->
+    <a href="#tutorials">Tutorials</a>
+    <a href="#blog">Blog</a>
+    <a class="enroll" href="#enroll">Enroll</a>
+   </nav>
+   <button class="burger" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+  </div></header>
+  <div class="copy">
+   <div class="col eyebrow"><span class="ent-mask"><span class="ent-line">PLANET</span></span></div>
+   <h1 class="col title"><span class="ent-mask"><span class="ent-line">EARTH</span></span></h1>
+   <div class="col rule"><span></span></div>
+   <p class="col lede">Learn more about the fascinating details that we call our home, Planet Earth. Course enrollment <br>starts today. Early Bird tickets typically last a week, don&rsquo;t miss out!</p>
+   <div class="col cta">
+    <button class="planet planet-l" type="button" data-slot="l">
+     <img data-planet="earth" alt="" src="{EARTH_CUT}"><img data-planet="venus" alt="" src="{VENUS_CUT}"><img data-planet="mars" alt="" src="{MARS_CUT}">
+    </button>
+    <button class="planet planet-r" type="button" data-slot="r">
+     <img data-planet="earth" alt="" src="{EARTH_CUT}"><img data-planet="venus" alt="" src="{VENUS_CUT}"><img data-planet="mars" alt="" src="{MARS_CUT}">
+    </button>
+    <a href="#enroll">GET STARTED</a>
+    <span class="label label-l"></span><span class="label label-r"></span> <!-- filled by JS -->
+   </div>
+  </div>
+ </div>
+ <button class="scroll" type="button" aria-label="Scroll to next section">
+  <svg viewBox="0 0 26 33" fill="none" aria-hidden="true"><path d="M13 1.5 V31.5 M1.9 20.4 L13 31.5 L24.1 20.4" stroke="#ffffff" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+ </button>
+</div>
+<main class="sections">
+ section#planets[h2#planets-h="Three worlds, one classroom"] > .grid3 > 3x article.card (.thumb>img still + .pad>h3+ p +.row>button[data-feature]+a[href=#enroll])
+ section#tuition[h2="Simple tuition, early-bird pricing"] > .grid3 > cards Flyby $19 / Orbit $49 / Mission $99 each .pad>h3+.price+ul.ticks(3 li)+.row>a
+ section#tutorials[h2="Start with four lessons"] > .tuts > 4x article.tut (.n 01..04 + div>h3+p) with EXACT copy Sec.12
+ section#blog[h2="Field notes"] > .posts > 3x article.post (time+h3+p) EXACT copy Sec.12
+ section#enroll[h2="Get started today"] > .enrollbox > div(h3+p) + form#enroll-form (.form>name,email,track select earth/venus/mars + button Claim Early Bird + p#form-note[role=status]) + footer.footer (logo + nav + © 2026 SpaceEdu...)
+</main>
+CRITICAL: both slots contain ALL 3 cutouts as siblings. Switch toggles .is-shown only. NEVER reassign img.src.
+
+--------------------------------------------------------------------------------
+7. CSS — HERO EXACT VALUES (copy verbatim)
+--------------------------------------------------------------------------------
+.sky video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .22s linear}
+.sky video.is-active{opacity:1}
+.planet{position:absolute;z-index:-1;padding:0;border:0;background:none;-webkit-appearance:none;appearance:none;line-height:0;cursor:pointer;pointer-events:auto;transition:transform .45s cubic-bezier(.22,1,.36,1)}
+.planet img{display:none;width:100%;height:auto}
+.planet img.is-shown{display:block}
+.planet:hover{transform:scale(1.045)} .planet:active{transform:scale(.99)}
+.planet-l{width:calc(143 * var(--u));left:calc(-69.5 * var(--u));top:calc(-38.3 * var(--u))}
+.planet-r{width:calc(143 * var(--u));right:calc(-64.7 * var(--u));top:calc(-40.6 * var(--u))}
+.copy{position:absolute;inset:0;transform:translateY(var(--vshift));pointer-events:none}
+.copy a{pointer-events:auto} .col{position:absolute;left:0;right:calc(var(--gutter) * var(--u));text-align:center}
+.navbar{position:absolute;top:0;left:0;right:0;z-index:6;height:calc(88 * var(--u))}
+.navbar::after{content:"";position:absolute;left:calc(25 * var(--u));right:calc(49 * var(--u));top:calc(86 * var(--u));height:calc(2 * var(--u));background:var(--rule)}
+.navrow{position:absolute;left:calc(25 * var(--u));right:calc(49 * var(--u));top:0;height:calc(86 * var(--u));display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:var(--font-logo);font-weight:600;font-size:calc(18.4 * var(--u));letter-spacing:calc(-0.15 * var(--u));line-height:1;color:#fff;text-decoration:none;white-space:nowrap;position:relative;top:calc(-1 * var(--u))}
+.logo i{font-style:normal;color:var(--cyan-logo)}
+.burger{display:none;position:relative;width:calc(46 * var(--u));height:calc(46 * var(--u));padding:0;border:0;background:none;cursor:pointer;flex-direction:column;align-items:center;justify-content:center;gap:calc(6 * var(--u));flex:none}
+.burger span{display:block;width:calc(24 * var(--u));height:calc(2 * var(--u));border-radius:calc(2 * var(--u));background:#fff;transition:transform .28s cubic-bezier(.4,0,.2,1),opacity .18s linear}
+.navrow[data-open="true"] .burger span:nth-child(1){transform:translateY(calc(8 * var(--u))) rotate(45deg)}
+.navrow[data-open="true"] .burger span:nth-child(2){opacity:0}
+.navrow[data-open="true"] .burger span:nth-child(3){transform:translateY(calc(-8 * var(--u))) rotate(-45deg)}
+.links{display:flex;align-items:center}
+.links a{position:relative;display:flex;align-items:center;height:calc(86 * var(--u));font-size:calc(18.4 * var(--u));font-weight:400;line-height:1;color:#fff;text-decoration:none;padding:0 calc(17.5 * var(--u));letter-spacing:calc(-1 * var(--u));white-space:nowrap}
+.links a[aria-current="page"]::after{content:"";position:absolute;left:0;right:0;top:calc(83.5 * var(--u));height:calc(4 * var(--u));background:var(--cyan);border-radius:calc(1 * var(--u))}
+.links a:nth-child(3){letter-spacing:calc(-1.75 * var(--u))}
+.links a:nth-child(2){margin-left:calc(24 * var(--u))} .links a:nth-child(3){margin-left:calc(26 * var(--u))} .links a:nth-child(4){margin-left:calc(27 * var(--u))}
+.links a.enroll{margin-left:calc(28.5 * var(--u));width:calc(107 * var(--u));height:calc(38 * var(--u));border-radius:calc(19 * var(--u));display:flex;align-items:center;justify-content:center;font-size:calc(17 * var(--u));font-weight:600;letter-spacing:calc(-0.75 * var(--u));line-height:1;color:var(--btn-ink);text-decoration:none;padding-top:calc(2 * var(--u));background:linear-gradient(180deg,#ffffff 0%,#d8ecfe 9%,#dceefe 72%,#f4f9ff 100%);box-shadow:0 calc(3 * var(--u)) calc(14 * var(--u)) rgba(255,255,255,.22),inset 0 0 0 calc(1.5 * var(--u)) rgba(255,255,255,.92);flex:none}
+.eyebrow{top:calc(188.8 * var(--u));font-size:calc(30.45 * var(--u));font-weight:500;line-height:1;letter-spacing:calc(4 * var(--u));text-indent:calc(4 * var(--u));color:#fff}
+h1.title{top:calc(268 * var(--u));font-family:var(--font-serif);font-weight:400;font-size:calc(112.4 * var(--u));line-height:1;letter-spacing:calc(2 * var(--u));text-indent:calc(2 * var(--u));color:#fff}
+.rule{top:calc(405.5 * var(--u));height:calc(5 * var(--u));font-size:0;line-height:0;padding-right:calc(2 * var(--u))}
+.rule span{display:inline-block;vertical-align:top;width:calc(100 * var(--u));height:100%;border-radius:calc(2.5 * var(--u));background:var(--cyan)}
+p.lede{top:calc(433.2 * var(--u));font-size:calc(18.36 * var(--u));font-weight:400;line-height:calc(30 * var(--u));color:rgba(255,255,255,.95)}
+.cta{top:calc(597 * var(--u));height:calc(66 * var(--u));isolation:isolate}
+.cta a{display:inline-flex;align-items:center;justify-content:center;width:calc(216 * var(--u));height:calc(66 * var(--u));border-radius:calc(33 * var(--u));font-size:calc(17 * var(--u));font-weight:700;letter-spacing:0;text-indent:0;line-height:1;color:var(--btn-ink);text-decoration:none;padding-top:calc(2 * var(--u));background:linear-gradient(180deg,#ffffff 0%,#d6e8f8 4%,#d9ecfe 72%,#ffffff 100%);box-shadow:0 calc(10 * var(--u)) calc(18 * var(--u)) calc(-8 * var(--u)) rgba(255,255,255,.50),0 0 calc(26 * var(--u)) rgba(255,255,255,.18),inset 0 0 0 calc(2 * var(--u)) rgba(255,255,255,.9)}
+.label{position:absolute;top:calc(33 * var(--u));font-family:var(--font-serif);font-weight:400;font-size:calc(17.8 * var(--u));letter-spacing:calc(4.6 * var(--u));line-height:1;color:#fff;white-space:nowrap}
+.label.label-l{left:calc(111 * var(--u))} .label.label-r{right:calc(104 * var(--u))}
+.scroll{position:absolute;z-index:4;left:50%;margin-left:calc((-48 - (var(--gutter) / 2)) * var(--u));bottom:calc(68 * var(--u));width:calc(96 * var(--u));height:calc(96 * var(--u));border-radius:50%;background:rgba(24,30,42,.70);-webkit-backdrop-filter:blur(calc(6 * var(--u)));backdrop-filter:blur(calc(6 * var(--u)));border:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.scroll svg{width:calc(20 * var(--u));height:calc(25 * var(--u));display:block}
+FOCUS: .scroll/.links a/.enroll/.cta a/.logo:focus-visible{outline:calc(2*u) solid var(--cyan);offset:calc(3*u)} .planet:focus-visible{outline:calc(2*u);offset:calc(6*u);border-radius:50%}
+SECTIONS (same tokens): .sections{background:linear-gradient(#04101f,#071a33,#04101f)} .section{width:min(calc(1120*u),calc(100% - calc(48*u)));margin:auto;padding:calc(96*u) 0 calc(24*u)} .kicker{cyan,calc(14*u),ls calc(4*u),center} h2{serif calc(52*u)} .sub{center,calc(17*u)/calc(28*u)} .grid3{3col gap calc(24*u) mt calc(44*u)} .card{bg rgba(9,21,42,.78) border 1u radius 22u} .btn pill calc(46*u) min-h + ghost variant; .tuts 2col; .posts 3col; .enrollbox 2col grid; .form inputs height calc(50*u) radius 14u; .footer flex. Collapse to 1col @max-width:900px; h2 calc(40*u).
+
+--------------------------------------------------------------------------------
+8. RESPONSIVE — SIX TIERS, EXACT ORDER A,B,C,D,E,F
+--------------------------------------------------------------------------------
+A) @media (max-width:1030px),(max-height:620px): navrow L/R 25u; burger flex; .links absolute panel top 96u right 0 width min(324u,100vw-50u) column padding 12u radius 20u bg rgba(9,21,42,.84) blur 18u border 1u shadow; hidden opacity0/translateY(-10u); open visible. Links padding 14u 16u font 19u ls -.6u; dividers 1u; current::after bottom 9u left 16u 26x3u; enroll full-width 46u radius 23u.
+B) @media (min-width:580px) and (max-width:1030px) and (min-height:621px): :root gutter 0; --u min(max(min(.85px,100vh/780),min(100vw/900,100vh/1163)),1.15px); --dh-px 1120u; --vshift (100vh-dh)*.38. Repeat in @supports(100dvh) with dvh. navbar::after L/R 25u; lede br none; lede max 620u center pretty; label-r right 116u.
+C) @media (max-width:579px),(max-height:620px): :root gutter 0; --u max(min(.92px,100vh/620),min(100vw/430,100vh/880)); --dh 880u; --vshift *.34 (+dvh repeat). navbar 76u; after 24u/24u top 74u; navrow 24u 74u; links top 84u; .copy top 76u flex column center padding 56u 26u 0; .col static 100%; eyebrow 20u ls5; h1 86u mt15u; rule mt20u h5u span 84u; lede mt19u 15.5u/26u max400u balance br none; .cta relative top auto mt32u h60u a 190x60 r30; label 50% translateY-50% 16u ls4 L56 R60; planets 89u L-44.5 top-17 / R-44.5 top-18.3; scroll 74u ml-37 bottom49 svg 15.5x19.5.
+D) @media (max-height:660px){.scroll{display:none}}
+E) @media (max-height:620px): :root --u max(min(.85px,100vh/470),min(100vw/640,100vh/560)); --dh 560u; --vshift 0 (+dvh). copy pt26u; h1 64u mt8u; rule mt12u; lede mt12u; cta mt20u; label 15u L58 R58. Plus @media(min-width:821px) and (max-height:660px){.copy{transform:none}}
+F) LAST @media (max-width:500px): .label{top:calc(100% + 34*u);transform:none;font-size:15u} L6 R6.
+Reduced-motion: .sky video{display:none}; .planet no transition/transform; .links,.burger span{transition:none}.
+
+--------------------------------------------------------------------------------
+9. ENTRANCE ANIMATION (once, self-deleting)
+--------------------------------------------------------------------------------
+HEAD blocking BEFORE stylesheet EXACT:
+<script>(function(){try{if(!window.matchMedia||!matchMedia('(prefers-reduced-motion: reduce)').matches){document.documentElement.classList.add('anim');}}catch(e){}})();</script>
+Keyframes EXACT:
+@keyframes ent-reveal{from{transform:translateY(115%)}to{transform:translateY(0)}}
+@keyframes ent-rise{from{opacity:0;transform:translateY(var(--rise,10px))}to{opacity:1;transform:none}}
+@keyframes ent-settle{from{opacity:0;transform:translateY(var(--rise,8px)) scale(.965)}to{opacity:1;transform:none}}
+@keyframes ent-draw{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes ent-fade{from{opacity:0}to{opacity:1}}
+Base: .anim{--e-expo:cubic-bezier(.16,1,.3,1);--e-quint:cubic-bezier(.22,1,.36,1);--e-slow:cubic-bezier(.4,0,.2,1)}
+.ent-mask,.ent-line{display:block} .anim .ent-mask{overflow:hidden;padding-top:.18em;margin-top:-.18em}
+.anim .ent-line{transform:translateY(115%);will-change:transform}
+.anim .navbar::after,.anim .links a[aria-current]::after,.anim .rule span{transform:scaleX(0)}
+.anim .logo,.anim .links a,.anim .burger,.anim p.lede,.anim .label,.anim .cta a,.anim .scroll,.anim .sky{opacity:0}
+Sequence ALL `both`: sky fade 1.6s slow .25s; navbar::after draw .9s expo .12s; logo rise 8u .6s quint .20s; links a rise 8u .55s quint delays 1:.26 2:.31 3:.36 4:.41; enroll+burger settle 8u .6s quint .46s; current::after draw .55s expo .60s; eyebrow reveal .75s expo .30s; h1 reveal .95s expo .44s; rule draw .65s expo .78s; lede rise 12u .7s quint .86s; label-l rise 8u .6s 1.04s; label-r 1.10s; cta a settle 8u .7s 1.14s; scroll settle .6s 1.42s. (--rise:calc(8*u), lede calc(12*u)).
+Driver: if !html.anim return. Else fonts.ready with 500ms guard -> rAF->rAF -> add .play -> setTimeout 2150ms remove .anim+.play.
+
+--------------------------------------------------------------------------------
+10. JS BEHAVIOUR — PLANET SWITCHER + BURGER + SITE WIRING (ONE script before </body>)
+--------------------------------------------------------------------------------
+const ORDER=['earth','venus','mars'];
+DATA per planet {name, still, ledeHTML}:
+ earth EARTH + EARTH_STILL + "Learn more about the fascinating details that we call our home, Planet Earth. Course enrollment <br>starts today. Early Bird tickets typically last a week, don&rsquo;t miss out!"
+ venus VENUS + VENUS_STILL + "The hottest world in our solar system, wrapped in clouds of sulfuric acid. Course enrollment <br>starts today. Early Bird tickets typically last a week, don&rsquo;t miss out!"
+ mars  MARS  + MARS_STILL  + "The rust-red desert world, home to the tallest volcano we know of. Course enrollment <br>starts today. Early Bird tickets typically last a week, don&rsquo;t miss out!"
+show(next): (1) bail if !DATA[next] or next===current. (2) videos: if is next && !src && data-src -> src=data-src; toggle .is-active; play() w/ catch, pause others. (3) sky.style.backgroundImage=url(still). (4) h1 .ent-line textContent=name. (5) lede.innerHTML=lede. (6) rest=ORDER-next; L=rest[0] R=rest[1]; per slot toggle .is-shown by data-planet, set button data-planet, aria-label "Show <NAME>", label textContent=NAME.
+warm(p): video[data-planet=p]; if !src && data-src {preload=auto; src=data-src; load()}. Bind pointerenter+focus on both .planet. requestIdleCallback(warmAll,{timeout:4000}) else setTimeout 2500.
+Binding: click both .planet -> show(dataset.planet). Init show('earth').
+BURGER set(open): navrow.dataset.open, burger aria-expanded, aria-label Open/Close navigation. init false. Toggle click stopPropagation. Doc click outside closes. Escape closes+focus burger. links click a closes.
+SITE: .scroll click -> #planets.scrollIntoView({behavior: reduced?auto:smooth}). [data-feature] click -> show(k)+scroll top. #enroll-form submit preventDefault, validate name/email@, note success "Thanks {name} — your {NAME} Early Bird is reserved. Check {email}." else error. IntersectionObserver on #planets/#tuition/#tutorials/#blog/#enroll updates links aria-current (rootMargin -45%/-50%).
+
+--------------------------------------------------------------------------------
+11. ACCESSIBILITY (MUST)
+--------------------------------------------------------------------------------
+- .planet real <button type=button> dynamic aria-label; focus-visible cyan ring.
+- videos aria-hidden true muted playsinline preload (earth auto, others none).
+- cutout img alt="" decorative; labels carry meaning. Card thumbs have alt.
+- reduced-motion: no .anim, video hidden (still shows), no transforms/transitions.
+- .copy pointer-events none; only .copy a + .planet re-enable.
+- form labels tied, note role=status aria-live polite; burger aria-controls/expanded.
+
+--------------------------------------------------------------------------------
+12. EXACT COPY FOR SECTIONS
+--------------------------------------------------------------------------------
+planets sub: "Pick a world above — or start here. Each planet pairs its cinematic backdrop with a focused course track."
+ cards: EARTH/"Home-field geology, oceans and atmosphere. The beginner-friendly track." VENUS/"Runaway greenhouse physics under sulfuric-acid clouds. The hottest classroom." MARS/"Desert geology and Olympus Mons. Field-trip logic for future explorers." Buttons: Feature Earth/Venus/Mars + Join.
+tuition sub: "Enrollment starts today. Early Bird tickets typically last a week — don’t miss out."
+ Flyby $19 [1 planet track,10 video lessons,Printable field notes] Orbit $49 [All 3 planet tracks,Live Q&A sessions,Certificate] Mission $99 [Everything in Orbit,1:1 tutor feedback,Telescope workshop invite].
+tutorials sub: "Short, visual tutorials that pair with the hero backdrops."
+ 01 Reading a planet backdrop / Cloud bands, limb haze and what a 10-second loop can teach about rotation.
+ 02 Earth vs Venus atmospheres / Same size, opposite fates — pressure, CO2 and the greenhouse runaway.
+ 03 Mars volcanoes 101 / Why Olympus Mons grew so tall with no plate tectonics to move it.
+ 04 Early-bird study plan / A one-week sprint through all three worlds before enrollment closes.
+blog sub: "Dispatches from the SpaceEdu observatory deck."
+ AUG 20 2026 Why Venus still surprises us / New views through the acid haze...; AUG 12 Earth from 1276×720 / How compressed video loop preserves motion; AUG 01 Mars dust season guide / When to watch red planet turn hazy...
+enroll: h3 "Reserve your seat" p "One email, three worlds. We’ll confirm your planet track and hold early-bird pricing for a week." placeholders Ada Star / you@example.com; select Earth — Home World / Venus — Hottest World / Mars — Desert World; button Claim Early Bird.
+footer: logo spaceedu + nav Planets/Tution/Tutorials/Blog/Enroll + "© 2026 SpaceEdu. Early Bird tickets last a week."
+
+--------------------------------------------------------------------------------
+13. ACCEPTANCE CHECKS (AI MUST VERIFY BEFORE DONE)
+--------------------------------------------------------------------------------
+[ ] Load: EARTH featured, VENUS left, MARS right. Only earth video has src.
+[ ] Click side swaps cutout same frame (<2ms), no flash (class toggle only).
+[ ] earth->venus->mars->earth returns exact initial state.
+[ ] Backdrop crossfade .22s; headline/lede/cutouts/labels update together.
+[ ] No horizontal scroll 320..2560px (overflow-x hidden; section width min(1120u,100%-48u)).
+[ ] Entrance runs once; after ~2.15s html has neither .anim nor .play.
+[ ] One <style> in head, one main <script> before </body> (+ required head anim snippet).
+[ ] Burger toggles data-open/aria; closes outside/Escape/link.
+[ ] Scroll button -> #planets; card Feature -> show+top; form validates.
+[ ] reduced-motion: stills correct, no animation, video hidden.
+If any box unchecked, fix and re-verify. Then run `node --check` on extracted JS.

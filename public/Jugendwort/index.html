@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Zoom deaktiviert, nur scrollen -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Cucuri – Jugendwort Voting</title>
+  <!-- gleicher Font wie Main-Seite -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="jw-style.css" />
+</head>
+<body class="jw-body">
+  <div class="jw-bg-grid"></div>
+
+  <header class="jw-header">
+    <div class="jw-logo-title">
+      <span class="jw-logo-pulse">JW</span>
+      <div>
+        <h1 class="jw-title">Cucuri Jugendwort Voting</h1>
+        <p class="jw-subtitle">Insider‑Wörter, direkt aus deinem Chat.</p>
+      </div>
+    </div>
+    <!-- Zurück-Button mit eigener Klasse für Mobile-Layout -->
+    <a href="../index.html" class="jw-btn jw-btn-ghost jw-back-btn">⬅ Zurück zum Chat</a>
+  </header>
+
+  <main class="jw-main">
+    <section class="jw-section jw-section-intro">
+      <h2 class="jw-section-title">Wie läuft das ab?</h2>
+      <div class="jw-info-grid">
+        <div class="jw-info-card">
+          <h3>1. Wörter checken</h3>
+          <p>Schau dir die Liste mit euren Insider‑Wörtern an.</p>
+        </div>
+        <div class="jw-info-card">
+          <h3>2. Vote geben</h3>
+          <p>Du kannst immer genau ein Jugendwort wählen und deine Stimme später ändern.</p>
+        </div>
+        <div class="jw-info-card">
+          <h3>3. Ranking verfolgen</h3>
+          <p>Die Top‑Wörter werden automatisch nach oben sortiert.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="jw-section jw-section-filters">
+      <div class="jw-filters-bar">
+        <input
+          id="jw-search"
+          type="text"
+          class="jw-input"
+          placeholder="Such nach einem Wort oder Begriff..."
+        />
+        <select id="jw-sort" class="jw-select">
+          <option value="votes-desc">Sortierung: Meiste Votes</option>
+          <option value="alpha-asc">Sortierung: A–Z</option>
+          <option value="alpha-desc">Sortierung: Z–A</option>
+          <option value="newest">Sortierung: Neueste zuerst</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="jw-section">
+      <h2 class="jw-section-title">Aktuelle Jugendwörter</h2>
+      <div id="jw-list" class="jw-card-grid"></div>
+      <p id="jw-empty" class="jw-empty-msg jw-hidden">
+        Noch keine Wörter am Start.
+      </p>
+    </section>
+
+    <section class="jw-section jw-section-admin">
+      <div class="jw-admin-header">
+        <h2 class="jw-section-title">Admin‑Bereich</h2>
+        <button id="jw-toggle-admin" class="jw-btn jw-btn-outline jw-hidden">
+          Admin anzeigen
+        </button>
+      </div>
+
+      <div id="jw-admin-panel" class="jw-admin-panel jw-hidden">
+        <!-- Inhalt wird komplett von jw-script.js gebaut (Overview-Tabellen) -->
+      </div>
+    </section>
+  </main>
+
+  <footer class="jw-footer">
+    <p>Cucuri Jugendwort Voting – von Diraj Voruganti erstellt.</p>
+  </footer>
+
+  <script src="jw-script.js"></script>
+</body>
+</html>

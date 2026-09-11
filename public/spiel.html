@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neon Cube Jumper</title>
+    <style>
+      /* SpaceEdu Visual Redesign (NUR Design) — Tokens aus Design.txt, Spiel-Logik unverändert */
+      @import url("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Prata&display=swap");
+      body {
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(#04101f, #071a33 55%, #04101f);
+        color: #ffffff;
+        font-family: "Hanken Grotesk", system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
+      }
+      h1 {
+        margin-bottom: 10px;
+        font-family: "Prata", Georgia, serif;
+        font-weight: 400;
+        text-shadow: none;
+      }
+      h1::after {
+        content: "";
+        display: block;
+        width: 100px;
+        height: 4px;
+        margin: 10px auto 0;
+        border-radius: 3px;
+        background: #79dce8;
+      }
+      canvas {
+        background: rgba(9, 21, 42, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+        border-radius: 22px;
+      }
+      p {
+        color: rgba(255, 255, 255, 0.68);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Neon Cube Jumper</h1>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <p>Steuerung: <b>Leertaste</b> oder <b>Mausklick</b> zum Springen</p>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      let score = 0;
+      let gameOver = false;
+      let frames = 0;
+
+      const player = {
+        x: 50,
+        y: 250,
+        w: 30,
+        h: 30,
+        dy: 0,
+        gravity: 0.6,
+        jumpForce: -12,
+        grounded: false,
+        draw() {
+          ctx.fillStyle = "#0ff";
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "#0ff";
+          ctx.fillRect(this.x, this.y, this.w, this.h);
+          ctx.shadowBlur = 0;
+        },
+        update() {
+          this.dy += this.gravity;
+          this.y += this.dy;
+
+          // Bodenkollision
+          if (this.y + this.h >= canvas.height - 30) {
+            this.y = canvas.height - 30 - this.h;
+            this.dy = 0;
+            this.grounded = true;
+          } else {
+            this.grounded = false;
+          }
+        },
+        jump() {
+          if (this.grounded) {
+            this.dy = this.jumpForce;
+            this.grounded = false;
+          }
+        },
+      };
+
+      const obstacles = [];
+
+      function handleObstacles() {
+        // Generiere alle 100 Frames ein neues Hindernis
+        if (frames % 100 === 0) {
+          let h = Math.random() * 40 + 20;
+          obstacles.push({
+            x: canvas.width,
+            y: canvas.height - 30 - h,
+            w: 20,
+            h: h,
+            speed: 5 + score * 0.2, // Geschwindigkeit steigt mit den Punkten
+          });
+        }
+
+        for (let i = 0; i < obstacles.length; i++) {
+          let obs = obstacles[i];
+          obs.x -= obs.speed;
+
+          ctx.fillStyle = "#f0f";
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "#f0f";
+          ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+          ctx.shadowBlur = 0;
+
+          // Rechteck-Kollisionserkennung
+          if (
+            player.x < obs.x + obs.w &&
+            player.x + player.w > obs.x &&
+            player.y < obs.y + obs.h &&
+            player.y + player.h > obs.y
+          ) {
+            gameOver = true;
+          }
+
+          // Hindernis hinter dem Bildschirm entfernen
+          if (obs.x + obs.w < 0) {
+            obstacles.splice(i, 1);
+            i--;
+            score++;
+          }
+        }
+      }
+
+      function drawGround() {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - 30);
+        ctx.lineTo(canvas.width, canvas.height - 30);
+        ctx.stroke();
+      }
+
+      function loop() {
+        if (gameOver) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#f00";
+          ctx.font = "bold 40px sans-serif";
+          ctx.fillText(
+            "GAME OVER",
+            canvas.width / 2 - 120,
+            canvas.height / 2 - 10,
+          );
+          ctx.fillStyle = "#fff";
+          ctx.font = "20px sans-serif";
+          ctx.fillText(
+            "Klicke oder Leertaste für Neustart",
+            canvas.width / 2 - 150,
+            canvas.height / 2 + 30,
+          );
+          return;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        drawGround();
+        player.update();
+        player.draw();
+        handleObstacles();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "20px sans-serif";
+        ctx.fillText("Punkte: " + score, 20, 30);
+
+        frames++;
+        requestAnimationFrame(loop);
+      }
+
+      function restart() {
+        player.y = 250;
+        player.dy = 0;
+        obstacles.length = 0;
+        score = 0;
+        frames = 0;
+        gameOver = false;
+        loop();
+      }
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space") {
+          if (gameOver) restart();
+          else player.jump();
+        }
+      });
+
+      window.addEventListener("mousedown", () => {
+        if (gameOver) restart();
+        else player.jump();
+      });
+
+      // Startet die Spielschleife
+      loop();
+    </script>
+  </body>
+</html>

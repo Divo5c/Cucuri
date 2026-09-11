@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cucuri Chat</title>
+    <link rel="icon" href="favicon.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <header class="chat-header">
+      <h1 class="chat-title">Cucuri Chat</h1>
+      <div class="view-switch" role="tablist" aria-label="Ansicht wechseln">
+        <button id="viewBtnChat" class="active" type="button">💬 Chat</button>
+        <button id="viewBtnWorld" type="button">🌍 Welt</button>
+      </div>
+      <div class="chat-header-actions">
+        <button id="adminToggle" class="admin-btn hidden">Admin</button>
+        <button id="profileBtn" class="admin-btn hidden">Profil</button>
+        <button id="jugendwortBtn" class="admin-btn">Jugendwort</button>
+        <button id="coinPill" class="admin-btn hidden" title="Geldbörse öffnen">🪙 –</button>
+        <button id="logoutBtn" class="admin-btn hidden">Logout</button>
+      </div>
+    </header>
+
+    <!-- Login / Register Modal -->
+    <div id="authModal" class="modal active">
+      <div class="modal-content">
+        <div id="loginTab" class="tab active">
+          <h2>🔑 Einloggen</h2>
+          <input type="text" id="loginUsername" placeholder="Username" />
+          <input type="password" id="loginPassword" placeholder="Passwort" />
+          <label class="remember-row"><input type="checkbox" id="rememberMe" checked /> Dieses Gerät merken</label>
+          <button id="loginBtn">Einloggen</button>
+          <p id="loginError" class="error"></p>
+          <a href="#" id="switchToRegister">Kein Account? Registrieren</a>
+        </div>
+
+        <div id="registerTab" class="tab">
+          <h2>👋 Willkommen! <br />Registrieren</h2>
+          <input type="text" id="regUsername" placeholder="Username" />
+          <input type="password" id="regPassword" placeholder="Passwort" />
+          <button id="registerBtn">Registrieren</button>
+          <p id="registerError" class="error"></p>
+          <a href="#" id="switchToLogin">Schon Account? Einloggen</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jugendwort-Ergebnis-Modal -->
+    <div id="jugendwortModal" class="modal">
+      <div class="modal-content jugendwort-modal">
+        <h2>Jugendwort</h2>
+        <p class="jw-text">
+          Die Abstimmung für das Jugendwort in der 7c ist vorbei!
+        </p>
+        <p class="jw-result">
+          Gewonnen hat <span class="jw-term">"Trei"</span> mit
+          <strong>6 Votes</strong>.
+        </p>
+        <p class="jw-footer">--Erstellt von Diraj Voruganti--</p>
+        <button id="jwCloseBtn">Schließen</button>
+      </div>
+    </div>
+
+    <!-- Profil-Modal -->
+    <div id="profileModal" class="modal">
+      <div class="modal-content profile-modal">
+        <span class="close" id="profileClose">×</span>
+        <div class="profile-head">
+          <span id="profileAvatarBig">👤</span>
+          <h2 id="profileName">Profil</h2>
+          <span id="profileAdminBadge" class="admin-badge hidden">ADMIN</span>
+          <span id="profileBannedBadge" class="admin-badge hidden">GEBANNT</span>
+        </div>
+        <p id="profileBioView" class="profile-bio"></p>
+        <div id="profileEditFields" class="hidden">
+          <h3>Avatar</h3>
+          <div id="avatarGrid" class="avatar-grid"></div>
+          <h3>Farbe</h3>
+          <div id="colorGrid" class="color-grid"></div>
+          <h3>Bio</h3>
+          <textarea
+            id="profileBioInput"
+            maxlength="160"
+            placeholder="Erzähl kurz was über dich..."
+          ></textarea>
+          <button id="profileSaveBtn">Speichern</button>
+        </div>
+        <p id="profileMsg" class="profile-msg"></p>
+      </div>
+    </div>
+
+    <!-- Haupt-Chat + Lobby + Voice -->
+    <div id="chatContainer" class="hidden">
+      <div class="chat-main">
+        <div id="messages"></div>
+
+        <!-- 2D-Welt: WASD/Pfeile, Räume, Proximity-Voice, Speech-Bubbles -->
+        <div id="worldView" class="world-view hidden">
+          <div class="world-head">
+            <h2>Welt</h2>
+            <span id="worldStatus">WASD / Pfeiltasten zum Laufen.</span>
+          </div>
+          <div id="worldWrap">
+            <canvas id="worldCanvas" width="960" height="600"></canvas>
+            <div id="worldBubbles"></div>
+            <div id="interactPrompt" class="interact-prompt hidden"></div>
+          </div>
+          <div id="jobPanel" class="job-panel hidden"></div>
+          <p class="world-hint">WASD / Pfeile = laufen • E = interagieren • Gleiches Zimmer = reden • Ausgangstür = Voice</p>
+        </div>
+
+    <!-- Geldbörse -->
+    <div id="walletModal" class="modal">
+      <div class="modal-content game-modal">
+        <span class="close" id="walletClose">×</span>
+        <h2>Geldbörse</h2>
+        <p id="walletBalance" class="profile-bio">Kontostand: – 🪙</p>
+        <div id="walletItems"></div>
+      </div>
+    </div>
+
+    <!-- Job-Terminal -->
+    <div id="jobModal" class="modal">
+      <div class="modal-content game-modal">
+        <span class="close" id="jobClose">×</span>
+        <h2>Job-Terminal</h2>
+        <div id="jobBody"></div>
+      </div>
+    </div>
+
+    <!-- Shop -->
+    <div id="shopModal" class="modal">
+      <div class="modal-content game-modal">
+        <span class="close" id="shopClose">×</span>
+        <h2 id="shopTitle">Shop</h2>
+        <div id="shopItems"></div>
+        <p id="shopMsg" class="profile-msg"></p>
+      </div>
+    </div>
+
+    <!-- Rathaus / Stadt -->
+    <div id="cityModal" class="modal">
+      <div class="modal-content game-modal">
+        <span class="close" id="cityClose">×</span>
+        <h2 id="cityHead">Stadt</h2>
+        <p id="cityGoal" class="profile-bio"></p>
+        <div id="cityProjects"></div>
+        <p id="cityMsg" class="profile-msg"></p>
+      </div>
+    </div>
+
+    <!-- Computer -->
+    <div id="computerModal" class="modal">
+      <div class="modal-content game-modal">
+        <span class="close" id="computerClose">×</span>
+        <h2>Computer</h2>
+        <div id="computerBody"></div>
+      </div>
+    </div>
+
+        <div class="input-area">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Nachricht schreiben..."
+            maxlength="200"
+          />
+          <button id="sendBtn">Senden</button>
+        </div>
+      </div>
+
+      <!-- Lobby-Sidebar -->
+      <div class="sidebar">
+        <h3>Lobby</h3>
+        <ul id="onlineList"></ul>
+      </div>
+
+      <aside id="voiceSidebar" class="voice-panel" aria-label="Voice Chat">
+        <div class="voice-panel__heading">
+          <div><span class="voice-panel__eyebrow">LIVE AUDIO</span><h2>Voice Lobby</h2></div>
+          <span id="voiceConnectionDot" class="voice-dot" aria-label="Nicht verbunden"></span>
+        </div>
+        <p id="voiceStatus" class="voice-panel__status">Bereit zum Beitreten</p>
+        <div class="voice-panel__room"><span>🎙</span><div><strong>Lobby</strong><small id="voiceMemberCount">0 Teilnehmer</small></div></div>
+        <div class="voice-panel__actions">
+          <button id="voiceJoinBtn" class="voice-action voice-action--primary">Voice beitreten</button>
+          <button id="voiceMuteBtn" class="voice-action" disabled>Mikro stumm</button>
+          <button id="voiceLeaveBtn" class="voice-action voice-action--danger" disabled>Verlassen</button>
+        </div>
+        <h3 class="voice-panel__members-title">Im Raum</h3>
+        <ul id="voiceParticipants" class="voice-members"><li class="voice-members__empty">Noch niemand im Raum</li></ul>
+      </aside>
+    </div>
+
+    <!-- Admin-Panel -->
+    <div id="adminPanel" class="admin-panel hidden">
+      <div class="admin-panel-content">
+        <h2>Admin‑Panel</h2>
+        <p class="admin-info">
+          Angemeldet als Admin: <span id="adminName"></span>
+        </p>
+
+        <section class="admin-section">
+          <h3>User‑Verwaltung</h3>
+          <div class="admin-row">
+            <input
+              type="text"
+              id="banUsername"
+              placeholder="Username bannen/entbannen"
+            />
+            <button id="banBtn">Bann umschalten</button>
+          </div>
+          <div class="admin-row">
+            <input type="text" id="oldName" placeholder="Alter Name" />
+            <input type="text" id="newName" placeholder="Neuer Name" />
+            <button id="renameBtn">Namen ändern</button>
+          </div>
+        </section>
+
+        <section class="admin-section">
+          <h3>Chat‑Verwaltung</h3>
+          <div class="admin-row">
+            <button id="clearChatBtn" class="danger">
+              Gesamten Chat löschen
+            </button>
+          </div>
+          <p class="admin-hint">
+            Einzelne Nachrichten: als Admin mit der Maus über eine Nachricht
+            fahren → auf ✕ klicken.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Games-Menü -->
+    <div id="gamesMenu" class="games-menu">
+      <button id="toggleGamesBtn" class="toggle-btn">🎮</button>
+      <div class="games-list">
+        <a
+          href="https://makeitmeme.com/de/"
+          target="_blank"
+          class="game-btn meme"
+          >Make It Meme</a
+        >
+        <a href="https://skribbl.io/" target="_blank" class="game-btn skribbl"
+          >Skribbl.io</a
+        >
+        <a href="https://agar.io/" target="_blank" class="game-btn agario"
+          >Agar.io</a
+        >
+        <a
+          href="https://openguessr.com/multiplayer"
+          target="_blank"
+          class="game-btn guessr"
+          >OpenGuessr</a
+        >
+        <a href="/spiel.html" target="_blank" class="game-btn meinspiel"
+          >🎮 Mein Spiel</a
+        >
+        <a href="/downloads/Trash Recorder.exe" class="game-btn trash-recorder" download>💾 Trash Recorder herunterladen</a>
+      </div>
+    </div>
+
+    <!-- Mobiler Voice-Toggle-Button -->
+    <button id="voiceMobileToggle" class="voice-mobile-toggle" aria-label="Voice-Chat öffnen">🎙 VC</button>
+
+    <!-- Mobiles VC-Panel -->
+    <div id="voicePanelMobile" class="voice-panel-mobile" aria-hidden="true"></div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
