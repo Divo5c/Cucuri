@@ -395,6 +395,12 @@ document.addEventListener("DOMContentLoaded", () => {
     { x: 60, y: 60, w: 120, h: 26, zone: "villa", floor: 1 },
     { x: 340, y: 60, w: 80, h: 26, zone: "villa", floor: 1 },
     { x: 500, y: 60, w: 80, h: 26, zone: "villa", floor: 1 },
+    { x: 60, y: 80, w: 100, h: 50, zone: "villa", floor: 1 },
+    { x: 500, y: 80, w: 60, h: 50, zone: "villa", floor: 1 },
+    // Toilette/Büro/Lager
+    { x: 50, y: 230, w: 50, h: 30, zone: "villa", floor: 0 },
+    { x: 230, y: 410, w: 120, h: 40, zone: "villa", floor: 0 },
+    { x: 390, y: 410, w: 70, h: 50, zone: "villa", floor: 0 },
     // Dorf
     { x: 360, y: 400, w: 240, h: 20, zone: "village", floor: 0 },
   ];
@@ -1104,6 +1110,66 @@ document.addEventListener("DOMContentLoaded", () => {
       } },
     );
   });
+  // Zusätzliche Villa-Möbel für neue Räume (Toilette, Büro, Lager, Schlafzimmer, Bad, Balkon)
+  WORLD_FURNITURE.push(
+    { y: 250, draw: (c) => { // Toilette
+      c.fillStyle = "#e8e0d0"; wRR(c, 50, 230, 50, 30, 6); c.fill();
+      c.fillStyle = "#fff"; c.beginPath(); c.ellipse(75, 250, 18, 14, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = "#a0c4d0"; wRR(c, 60, 220, 30, 12, 3); c.fill();
+    } },
+    { y: 460, draw: (c) => { // Büro-Schreibtisch
+      c.fillStyle = "#4a3524"; c.fillRect(230, 410, 120, 40);
+      c.fillStyle = "#6b4a2c"; c.fillRect(230, 410, 120, 8);
+      c.fillStyle = "#101828"; c.fillRect(270, 420, 40, 20);
+      c.strokeStyle = "#79dce8"; c.lineWidth = 1; c.strokeRect(270, 420, 40, 20);
+      c.fillStyle = "#3a2c1c"; wRR(c, 240, 430, 20, 20, 4); c.fill();
+    } },
+    { y: 480, draw: (c) => { // Lager-Kisten
+      c.fillStyle = "#6b4a2c"; c.fillRect(390, 410, 70, 50);
+      c.strokeStyle = "#3a2c1c"; c.lineWidth = 2;
+      c.strokeRect(390, 410, 70, 50); c.beginPath(); c.moveTo(390, 435); c.lineTo(460, 435); c.stroke();
+      c.fillStyle = "#a97e4e"; c.fillRect(400, 420, 30, 20); c.fillRect(430, 430, 20, 15);
+    } },
+    { y: 130, draw: (c) => { // Schlafzimmer Bett
+      c.fillStyle = "#4a2c5a"; wRR(c, 60, 80, 100, 60, 8); c.fill();
+      c.fillStyle = "#6b4a8a"; wRR(c, 60, 80, 100, 20, 4); c.fill();
+      c.fillStyle = "#3a2c1c"; wRR(c, 60, 60, 30, 20, 3); c.fill();
+      c.fillStyle = "#ffd98c"; c.beginPath(); c.arc(75, 70, 6, 0, Math.PI * 2); c.fill();
+    } },
+    { y: 140, draw: (c) => { // Badezimmer Dusche
+      c.fillStyle = "#a0c4d0"; wRR(c, 500, 80, 60, 50, 8); c.fill();
+      c.strokeStyle = "#fff"; c.lineWidth = 2; c.strokeRect(500, 80, 60, 50);
+      c.fillStyle = "#3f6ea5"; c.beginPath(); c.arc(530, 105, 12, 0, Math.PI * 2); c.fill();
+    } },
+    { y: 80, draw: (c) => { // Balkon Geländer + Tisch
+      c.strokeStyle = "#6b4a2c"; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(636, 80); c.lineTo(924, 80); c.stroke();
+      c.fillStyle = "#6b4a2c"; c.fillRect(700, 50, 40, 30); c.fillRect(800, 50, 30, 30);
+      c.fillStyle = "#a97e4e"; c.beginPath(); c.ellipse(720, 65, 12, 8, 0, 0, Math.PI * 2); c.fill();
+    } },
+  );
+  // Dorf-Deko: Bäume, Laternen, Bänke, Zäune (visuell, nicht alle solid)
+  WORLD_FURNITURE.push(
+    { y: 320, draw: (c) => { // Bäume Dorfstraße
+      for (const [x,y] of [[100,280],[200,280],[600,280],[700,280],[800,280]]) {
+        c.fillStyle = "#2f5a2f"; c.beginPath(); c.arc(x, y, 18, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#5a3d1e"; c.fillRect(x-4, y+10, 8, 14);
+      }
+    } },
+    { y: 340, draw: (c) => { // Laternen
+      for (const x of [150,300,450,600,750,850]) {
+        c.fillStyle = "#3a3a3a"; c.fillRect(x-2, 320, 4, 20);
+        c.fillStyle = "#ffd98c"; c.beginPath(); c.arc(x, 315, 8, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "rgba(255,220,140,.3)"; c.beginPath(); c.arc(x, 315, 18, 0, Math.PI * 2); c.fill();
+      }
+    } },
+    { y: 480, draw: (c) => { // Bänke Park
+      for (const [x,y] of [[120,460],[180,460]]) {
+        c.fillStyle = "#6b4a2c"; c.fillRect(x-20, y, 40, 8);
+        c.fillStyle = "#3a2c1c"; c.fillRect(x-20, y+8, 4, 12); c.fillRect(x+16, y+8, 4, 12);
+      }
+    } },
+  );
   WORLD_FURNITURE.push(
     { y: 464, draw: (c) => {
       c.fillStyle = "#6b4a2c"; c.beginPath(); c.ellipse(142, 452, 26, 13, 0, 0, Math.PI * 2); c.fill();
