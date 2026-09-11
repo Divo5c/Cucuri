@@ -221,6 +221,20 @@
         </section>
 
         <section class="admin-section">
+          <h3>Economy‑Verwaltung</h3>
+          <div class="admin-row">
+            <input type="text" id="ecoTarget" placeholder="Spieler" />
+            <input type="number" id="ecoAmount" placeholder="Betrag" min="0" max="1000000" />
+          </div>
+          <div class="admin-row">
+            <button id="ecoSetBtn">Setzen</button>
+            <button id="ecoAddBtn">+ Hinzufügen</button>
+            <button id="ecoRemoveBtn">- Abziehen</button>
+          </div>
+          <p id="ecoMsg" class="admin-hint"></p>
+        </section>
+
+        <section class="admin-section">
           <h3>Chat‑Verwaltung</h3>
           <div class="admin-row">
             <button id="clearChatBtn" class="danger">

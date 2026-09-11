@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, default: null },
   coins: { type: Number, default: 100 },
   inventory: { type: [{ _id: false, id: String, qty: Number }], default: [] },
-  lastWorldPos: { type: { _id: false, x: Number, y: Number, room: String }, default: undefined },
+  lastWorldPos: { type: { _id: false, x: Number, y: Number, room: String, zone: String, floor: Number }, default: undefined },
 });
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
@@ -117,26 +117,29 @@ const ITEM_CATALOG = {};
 for (const shop of Object.values(SHOPS)) {
   for (const item of shop.items) ITEM_CATALOG[item.id] = { name: item.name, price: item.price };
 }
-// Lieferziele: feste Spots mit Raum (serverseitig validiert)
+// Lieferziele: nur im Dorf (Postbotenjob) — Villa ist Wohnort, kein Lieferziel
 const DROP_SPOTS = [
-  { id: "drop_kitchen", room: "kitchen", x: 140, y: 112, label: "Küchentresen" },
-  { id: "drop_living", room: "living", x: 618, y: 130, label: "Regal" },
-  { id: "drop_gaming", room: "gaming", x: 890, y: 150, label: "PC 3" },
-  { id: "drop_chill", room: "chill", x: 150, y: 420, label: "Beistelltisch" },
+  { id: "drop_post", room: "post", zone: "village", floor: 0, x: 150, y: 170, label: "Postschalter" },
+  { id: "drop_shop", room: "shop", zone: "village", floor: 0, x: 810, y: 170, label: "Shop-Theke" },
+  { id: "drop_park", room: "park", zone: "village", floor: 0, x: 180, y: 450, label: "Parkbank" },
+  { id: "drop_village_center", room: "village_center", zone: "village", floor: 0, x: 480, y: 300, label: "Marktplatz" },
+  { id: "drop_cafe", room: "cafe", zone: "village", floor: 0, x: 740, y: 450, label: "Café-Tresen" },
 ];
-const JOB_DELIVERY = { id: "delivery", name: "Lieferdienst", reward: 40, minSeconds: 5 };
-// Bauprojekte: Kosten + Gebäude-Definition (Client rendert aus dieser Def)
+const JOB_DELIVERY = { id: "delivery", name: "Postbote", reward: 40, minSeconds: 5 };
+// Bauprojekte: Café ausschließlich im Dorf (Zone village)
 const CITY_PROJECTS = [
   {
     id: "cafe",
     name: "Café",
-    desc: "Gemütliches Café im Osten des Eingangs.",
+    desc: "Gemütliches Café im Dorf — Baustelle bei 500 Coins fertig.",
     cost: 500,
+    zone: "village",
     building: {
       id: "cafe",
-      counter: { x: 760, y: 470, w: 110, h: 28 },
-      tables: [{ x: 780, y: 520 }, { x: 850, y: 520 }],
-      sign: { x: 815, y: 462, text: "CAFÉ" },
+      zone: "village",
+      counter: { x: 640, y: 380, w: 110, h: 28 },
+      tables: [{ x: 660, y: 430 }, { x: 730, y: 430 }],
+      sign: { x: 695, y: 366, text: "CAFÉ" },
     },
   },
 ];
@@ -243,7 +246,7 @@ function saveWorldPos(socket) {
     const username = sessions.get(socket.id);
     const rec = worldUsers.get(socket.id);
     if (!username || !rec) return;
-    const pos = { x: Math.round(rec.x), y: Math.round(rec.y), room: rec.room };
+    const pos = { x: Math.round(rec.x), y: Math.round(rec.y), room: rec.room, zone: rec.zone || "villa", floor: rec.floor || 0 };
     User.updateOne({ username }, { $set: { lastWorldPos: pos } }).catch((err) =>
       console.error("lastWorldPos Fehler:", err.message),
     );
@@ -256,8 +259,14 @@ function saveWorldPos(socket) {
 
 const sessions = new Map(); // socket.id -> username
 const voiceRoomsUsers = new Map(); // roomId -> Set(socket.id)
-const worldUsers = new Map(); // socket.id -> {username,x,y,room,seat,avatar,color,banned,tempBanned}
-const WORLD_ROOMS = ["lounge", "kitchen", "living", "gaming", "chill"];
+const worldUsers = new Map(); // socket.id -> {username,x,y,room,zone,floor,seat,avatar,color,banned,tempBanned}
+const WORLD_ZONES = ["villa", "village"];
+const WORLD_FLOORS = { villa: [0, 1], village: [0] };
+const WORLD_ROOMS = [
+  "lounge", "kitchen", "living_room", "living", "gaming", "chill",
+  "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway",
+  "village_center", "village_road", "cafe", "shop", "post", "park"
+];
 let lastWorldBroadcast = 0;
 
 function broadcastWorld() {
@@ -788,6 +797,8 @@ io.on("connection", (socket) => {
         name: JOB_DELIVERY.name,
         targetId: spot.id,
         targetRoom: spot.room,
+        targetZone: spot.zone,
+        targetFloor: spot.floor,
         targetLabel: spot.label,
         targetX: spot.x,
         targetY: spot.y,
@@ -819,7 +830,7 @@ io.on("connection", (socket) => {
       const presence = worldUsers.get(socket.id);
       if (!presence) return socket.emit("jobResult", { ok: false, message: "Du bist nicht in der Welt." });
       const dx = presence.x - spot.x, dy = presence.y - spot.y;
-      if (presence.room !== spot.room || dx * dx + dy * dy > 160 * 160)
+      if (presence.zone !== spot.zone || presence.room !== spot.room || dx * dx + dy * dy > 160 * 160)
         return socket.emit("jobResult", { ok: false, message: `Du musst am Ziel sein (${spot.label}).` });
       activeJobs.delete(username); // genau einmal auszahlen
       await earnCoins(username, job.reward, `job:${job.targetId}`);
@@ -874,6 +885,44 @@ io.on("connection", (socket) => {
     } catch (err) {
       console.error("cityContribute Fehler:", err.message);
       socket.emit("cityResult", { ok: false, message: "Fehler beim Beitragen." });
+    }
+  });
+
+  // ===== ADMIN ECONOMY (nur Divo, server-autoritativ) =====
+  socket.on("adminEconomy", async ({ target, action, amount }) => {
+    const caller = sessions.get(socket.id);
+    if (caller !== "Divo") return socket.emit("adminEconomyResult", { ok: false, message: "Kein Admin." });
+    if (!target || !["set", "add", "remove"].includes(action))
+      return socket.emit("adminEconomyResult", { ok: false, message: "Ungültige Aktion." });
+    if (!Number.isFinite(amount) || !Number.isInteger(amount) || amount < 0 || amount > 1000000)
+      return socket.emit("adminEconomyResult", { ok: false, message: "Ungültiger Betrag (0–1000000)." });
+    try {
+      const user = await User.findOne({ username: target });
+      if (!user) return socket.emit("adminEconomyResult", { ok: false, message: "Spieler nicht gefunden." });
+      let newBalance;
+      if (action === "set") {
+        if (amount < 0) return socket.emit("adminEconomyResult", { ok: false, message: "Negativer Stand nicht erlaubt." });
+        user.coins = amount;
+        await user.save();
+        newBalance = amount;
+      } else if (action === "add") {
+        newBalance = await earnCoins(target, amount, `admin:add:${caller}`);
+      } else if (action === "remove") {
+        const res = await spendCoins(target, amount, `admin:remove:${caller}`);
+        if (!res.ok) return socket.emit("adminEconomyResult", { ok: false, message: res.message });
+        newBalance = res.balance;
+      }
+      socket.emit("adminEconomyResult", { ok: true, message: `${target}: ${newBalance} 🪙`, balance: newBalance });
+      // Betroffenen live aktualisieren, falls online
+      for (const [sid, uname] of sessions) {
+        if (uname === target) {
+          const s = io.sockets.sockets.get(sid);
+          if (s) emitEconomy(s, target);
+        }
+      }
+    } catch (err) {
+      console.error("adminEconomy Fehler:", err.message);
+      socket.emit("adminEconomyResult", { ok: false, message: "Fehler." });
     }
   });
 
@@ -1133,7 +1182,7 @@ io.on("connection", (socket) => {
       );
     }
     let avatar = null, color = null, banned = false;
-    let spawn = { x: 480, y: 470 };
+    let spawn = { x: 480, y: 500, zone: "villa", floor: 0, room: "lounge" };
     try {
       const doc = await User.findOne({ username }, "avatar color isBanned lastWorldPos").lean();
       if (doc) {
@@ -1145,6 +1194,9 @@ io.on("connection", (socket) => {
           spawn = {
             x: Math.max(20, Math.min(940, p.x)),
             y: Math.max(20, Math.min(580, p.y)),
+            zone: (p.zone && WORLD_ZONES.includes(p.zone)) ? p.zone : "villa",
+            floor: Number.isFinite(p.floor) ? p.floor : 0,
+            room: p.room || "lounge",
           };
         }
       }
@@ -1155,7 +1207,9 @@ io.on("connection", (socket) => {
       username,
       x: spawn.x,
       y: spawn.y,
-      room: "lounge",
+      room: spawn.room,
+      zone: spawn.zone,
+      floor: spawn.floor,
       seat: null,
       avatar,
       color,
@@ -1163,18 +1217,20 @@ io.on("connection", (socket) => {
       tempBanned: (tempBans.get(username) || 0) > Date.now(),
       updatedAt: Date.now(),
     });
-    socket.emit("worldJoined", { x: spawn.x, y: spawn.y });
+    socket.emit("worldJoined", { x: spawn.x, y: spawn.y, zone: spawn.zone, floor: spawn.floor, room: spawn.room });
     broadcastWorld();
   });
 
   socket.on("worldMove", (data) => {
     const u = worldUsers.get(socket.id);
     if (!u) return;
-    const { x, y, room, seat } = data || {};
+    const { x, y, room, zone, floor, seat } = data || {};
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     u.x = Math.max(0, Math.min(960, x));
     u.y = Math.max(0, Math.min(600, y));
     if (WORLD_ROOMS.includes(room)) u.room = room;
+    if (zone && WORLD_ZONES.includes(zone)) u.zone = zone;
+    if (Number.isFinite(floor) && floor >= 0 && floor <= 2) u.floor = floor;
     u.seat = typeof seat === "string" && seat.length < 16 ? seat : null;
     u.tempBanned = (tempBans.get(u.username) || 0) > Date.now();
     u.updatedAt = Date.now();

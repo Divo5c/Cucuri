@@ -151,6 +151,19 @@ document.addEventListener("DOMContentLoaded", () => {
   $("banBtn")?.addEventListener("click", () => { const username = $("banUsername")?.value.trim(); if (username) socket.emit("adminToggleBan", { username }); });
   $("renameBtn")?.addEventListener("click", () => { const oldName = $("oldName")?.value.trim(), newName = $("newName")?.value.trim(); if (oldName && newName) socket.emit("adminRenameUser", { oldName, newName }); });
   $("clearChatBtn")?.addEventListener("click", () => { if (confirm("Gesamten Chat wirklich löschen?")) socket.emit("adminClearChat"); });
+  const ecoDo = (action) => {
+    const target = $("ecoTarget")?.value.trim();
+    const amount = parseInt($("ecoAmount")?.value, 10);
+    if (!target || !Number.isFinite(amount)) { const m = $("ecoMsg"); if (m) m.textContent = "Spieler + Betrag eingeben."; return; }
+    socket.emit("adminEconomy", { target, action, amount });
+  };
+  $("ecoSetBtn")?.addEventListener("click", () => ecoDo("set"));
+  $("ecoAddBtn")?.addEventListener("click", () => ecoDo("add"));
+  $("ecoRemoveBtn")?.addEventListener("click", () => ecoDo("remove"));
+  socket.on("adminEconomyResult", (res) => {
+    const m = $("ecoMsg");
+    if (m) { m.textContent = res.message || ""; m.style.color = res.ok ? "" : "#ff8d98"; }
+  });
   socket.on("adminActionResult", ({ message }) => alert(message));
   const youthModal = $("jugendwortModal");
   $("jugendwortBtn")?.addEventListener("click", () => youthModal?.classList.add("active"));
@@ -261,83 +274,174 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== 2D-Welt: Datenmodell (Geometrie zuerst, Deko danach) =====
   // Koordinatenraum 960x600 = Server-Protokoll (kein Backend-Change).
   // Maßstab: Player-Radius 16 (Durchmesser 32) als Referenz für alles.
+  // ===== WORLD: Villa + Dorf, 2 Etagen, Zonen =====
   const WORLD = {
     w: 960, h: 600,
+    // Villa Erdgeschoss — großes Haus, 10 Räume
     rooms: [
-      { id: "kitchen", name: "Küche", x: 36, y: 36, w: 288, h: 276, floor: "rgba(170,200,215,.08)" },
-      { id: "living", name: "Wohnzimmer", x: 336, y: 36, w: 288, h: 276, floor: "rgba(150,130,200,.08)" },
-      { id: "gaming", name: "Gaming", x: 636, y: 36, w: 288, h: 276, floor: "rgba(121,220,232,.07)" },
-      { id: "chill", name: "Chill-Ecke", x: 36, y: 400, w: 252, h: 164, floor: "rgba(255,190,120,.09)" },
-      { id: "lounge", name: "Eingang & Flur", x: 36, y: 312, w: 888, h: 252, floor: "rgba(200,150,100,.05)" },
+      { id: "kitchen", name: "Küche", x: 36, y: 36, w: 220, h: 180, zone: "villa", floor: 0, floorColor: "rgba(170,200,215,.08)" },
+      { id: "dining", name: "Esszimmer", x: 256, y: 36, w: 68, h: 100, zone: "villa", floor: 0, floorColor: "rgba(200,180,140,.08)" },
+      { id: "living_room", name: "Wohnzimmer", x: 336, y: 36, w: 260, h: 180, zone: "villa", floor: 0, floorColor: "rgba(150,130,200,.08)" },
+      { id: "gaming", name: "Gaming", x: 636, y: 36, w: 288, h: 180, zone: "villa", floor: 0, floorColor: "rgba(121,220,232,.07)" },
+      { id: "toilet", name: "Toilette", x: 36, y: 216, w: 90, h: 84, zone: "villa", floor: 0, floorColor: "rgba(180,210,200,.09)" },
+      { id: "chill", name: "Chill-Ecke", x: 126, y: 216, w: 130, h: 84, zone: "villa", floor: 0, floorColor: "rgba(255,190,120,.09)" },
+      { id: "lounge", name: "Flur", x: 36, y: 300, w: 888, h: 80, zone: "villa", floor: 0, floorColor: "rgba(200,150,100,.05)" },
+      { id: "entrance", name: "Eingang", x: 36, y: 380, w: 180, h: 184, zone: "villa", floor: 0, floorColor: "rgba(200,170,120,.06)" },
+      { id: "office", name: "Arbeitszimmer", x: 216, y: 380, w: 160, h: 100, zone: "villa", floor: 0, floorColor: "rgba(140,170,180,.08)" },
+      { id: "storage", name: "Abstellraum", x: 376, y: 380, w: 100, h: 100, zone: "villa", floor: 0, floorColor: "rgba(180,180,160,.07)" },
+      // Obergeschoss
+      { id: "bedroom", name: "Schlafzimmer", x: 36, y: 36, w: 260, h: 180, zone: "villa", floor: 1, floorColor: "rgba(200,140,160,.08)" },
+      { id: "bedroom2", name: "Gästezimmer", x: 296, y: 36, w: 180, h: 140, zone: "villa", floor: 1, floorColor: "rgba(180,160,200,.08)" },
+      { id: "bathroom", name: "Badezimmer", x: 476, y: 36, w: 160, h: 140, zone: "villa", floor: 1, floorColor: "rgba(140,190,200,.09)" },
+      { id: "hallway_up", name: "Flur OG", x: 36, y: 216, w: 888, h: 80, zone: "villa", floor: 1, floorColor: "rgba(200,150,100,.05)" },
+      { id: "balcony", name: "Balkon", x: 636, y: 36, w: 288, h: 80, zone: "villa", floor: 1, floorColor: "rgba(160,200,180,.07)" },
+      // Dorf
+      { id: "village_center", name: "Marktplatz", x: 340, y: 220, w: 280, h: 160, zone: "village", floor: 0, floorColor: "rgba(100,150,100,.07)" },
+      { id: "village_road", name: "Dorfstraße", x: 36, y: 300, w: 888, h: 60, zone: "village", floor: 0, floorColor: "rgba(120,110,90,.06)" },
+      { id: "post", name: "Post", x: 80, y: 120, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(200,180,120,.08)" },
+      { id: "shop", name: "Shop", x: 740, y: 120, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(140,180,160,.08)" },
+      { id: "park", name: "Park", x: 80, y: 380, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(120,170,120,.08)" },
+      { id: "cafe", name: "Café", x: 640, y: 380, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(180,140,120,.08)" },
+      { id: "rathaus", name: "Rathaus", x: 340, y: 80, w: 280, h: 100, zone: "village", floor: 0, floorColor: "rgba(150,140,180,.08)" },
     ],
     walls: [
-      { x: 24, y: 24, w: 912, h: 12 },
-      { x: 24, y: 564, w: 912, h: 12 },
-      { x: 24, y: 24, w: 12, h: 552 },
-      { x: 924, y: 24, w: 12, h: 552 },
-      { x: 36, y: 300, w: 110, h: 12 },
-      { x: 200, y: 300, w: 253, h: 12 },
-      { x: 507, y: 300, w: 253, h: 12 },
-      { x: 814, y: 300, w: 110, h: 12 },
-      { x: 324, y: 36, w: 12, h: 264 },
-      { x: 624, y: 36, w: 12, h: 264 },
-      { x: 288, y: 400, w: 12, h: 100 },
+      // Außen Villa EG
+      { x: 24, y: 24, w: 912, h: 12, zone: "villa", floor: 0 },
+      { x: 24, y: 564, w: 912, h: 12, zone: "villa", floor: 0 },
+      { x: 24, y: 24, w: 12, h: 552, zone: "villa", floor: 0 },
+      { x: 924, y: 24, w: 12, h: 552, zone: "villa", floor: 0 },
+      // Innen EG
+      { x: 36, y: 300, w: 110, h: 12, zone: "villa", floor: 0 },
+      { x: 200, y: 300, w: 253, h: 12, zone: "villa", floor: 0 },
+      { x: 507, y: 300, w: 253, h: 12, zone: "villa", floor: 0 },
+      { x: 814, y: 300, w: 110, h: 12, zone: "villa", floor: 0 },
+      { x: 324, y: 36, w: 12, h: 180, zone: "villa", floor: 0 },
+      { x: 256, y: 36, w: 12, h: 100, zone: "villa", floor: 0 },
+      { x: 624, y: 36, w: 12, h: 180, zone: "villa", floor: 0 },
+      { x: 36, y: 216, w: 288, h: 12, zone: "villa", floor: 0 },
+      { x: 126, y: 216, w: 12, h: 84, zone: "villa", floor: 0 },
+      { x: 216, y: 380, w: 12, h: 100, zone: "villa", floor: 0 },
+      { x: 376, y: 380, w: 12, h: 100, zone: "villa", floor: 0 },
+      // OG
+      { x: 24, y: 24, w: 912, h: 12, zone: "villa", floor: 1 },
+      { x: 24, y: 564, w: 912, h: 12, zone: "villa", floor: 1 },
+      { x: 24, y: 24, w: 12, h: 552, zone: "villa", floor: 1 },
+      { x: 924, y: 24, w: 12, h: 552, zone: "villa", floor: 1 },
+      { x: 36, y: 300, w: 888, h: 12, zone: "villa", floor: 1 },
+      { x: 296, y: 36, w: 12, h: 180, zone: "villa", floor: 1 },
+      { x: 476, y: 36, w: 12, h: 180, zone: "villa", floor: 1 },
+      { x: 636, y: 36, w: 12, h: 80, zone: "villa", floor: 1 },
+      // Dorf Außen + Straßenrahmen
+      { x: 24, y: 24, w: 912, h: 12, zone: "village", floor: 0 },
+      { x: 24, y: 564, w: 912, h: 12, zone: "village", floor: 0 },
+      { x: 24, y: 24, w: 12, h: 552, zone: "village", floor: 0 },
+      { x: 924, y: 24, w: 12, h: 552, zone: "village", floor: 0 },
     ],
     doors: [
-      { x: 146, y: 296, w: 54, h: 20, from: "kitchen", to: "lounge" },
-      { x: 453, y: 296, w: 54, h: 20, from: "living", to: "lounge" },
-      { x: 760, y: 296, w: 54, h: 20, from: "gaming", to: "lounge" },
+      { x: 146, y: 296, w: 54, h: 20, from: "kitchen", to: "lounge", zone: "villa", floor: 0 },
+      { x: 453, y: 296, w: 54, h: 20, from: "living_room", to: "lounge", zone: "villa", floor: 0 },
+      { x: 760, y: 296, w: 54, h: 20, from: "gaming", to: "lounge", zone: "villa", floor: 0 },
+      { x: 120, y: 210, w: 20, h: 54, from: "toilet", to: "chill", zone: "villa", floor: 0 },
+      { x: 300, y: 376, w: 50, h: 20, from: "office", to: "entrance", zone: "villa", floor: 0 },
+      // Treppe
+      { x: 480, y: 360, w: 60, h: 20, from: "lounge", to: "hallway_up", zone: "villa", floor: 0 },
+      // Haustür
+      { x: 120, y: 552, w: 50, h: 20, from: "entrance", to: "village_center", zone: "villa", floor: 0 },
     ],
     seats: [
-      { id: "k1", x: 140, y: 244, room: "kitchen" },
-      { id: "k2", x: 240, y: 244, room: "kitchen" },
-      { id: "s1", x: 440, y: 180, room: "living" },
-      { id: "s2", x: 520, y: 180, room: "living" },
-      { id: "g1", x: 695, y: 172, room: "gaming" },
-      { id: "g2", x: 780, y: 172, room: "gaming" },
-      { id: "g3", x: 865, y: 172, room: "gaming" },
-      { id: "c1", x: 215, y: 505, room: "chill" },
+      { id: "k1", x: 140, y: 244, room: "kitchen", zone: "villa", floor: 0 },
+      { id: "k2", x: 240, y: 244, room: "kitchen", zone: "villa", floor: 0 },
+      { id: "s1", x: 440, y: 120, room: "living_room", zone: "villa", floor: 0 },
+      { id: "s2", x: 520, y: 120, room: "living_room", zone: "villa", floor: 0 },
+      { id: "g1", x: 695, y: 172, room: "gaming", zone: "villa", floor: 0 },
+      { id: "g2", x: 780, y: 172, room: "gaming", zone: "villa", floor: 0 },
+      { id: "g3", x: 865, y: 172, room: "gaming", zone: "villa", floor: 0 },
+      { id: "c1", x: 180, y: 250, room: "chill", zone: "villa", floor: 0 },
+      { id: "b1", x: 150, y: 100, room: "bedroom", zone: "villa", floor: 1 },
+      { id: "b2", x: 350, y: 100, room: "bedroom2", zone: "villa", floor: 1 },
+      { id: "v1", x: 480, y: 300, room: "village_center", zone: "village", floor: 0 },
+      { id: "p1", x: 150, y: 450, room: "park", zone: "village", floor: 0 },
     ],
-    spawn: { x: 480, y: 500 },
+    spawn: { x: 480, y: 500, zone: "villa", floor: 0, room: "lounge" },
+    // Villa-Haupteingang und Dorf-Eingang
+    villaExit: { x: 120, y: 560, w: 50, h: 20, fromZone: "villa", toZone: "village", toPos: { x: 480, y: 500, zone: "village", floor: 0 } },
+    villageEntry: { x: 480, y: 500, w: 50, h: 20, fromZone: "village", toZone: "villa", toPos: { x: 120, y: 540, zone: "villa", floor: 0 } },
     exit: { x: 455, y: 516, w: 50, h: 32 },
   };
-  const ROOM_NAMES = { lounge: "Eingang", kitchen: "Küche", living: "Wohnzimmer", gaming: "Gaming-Zimmer", chill: "Chill-Ecke" };
+  const ROOM_NAMES = { lounge: "Flur", kitchen: "Küche", living: "Wohnzimmer", living_room: "Wohnzimmer", gaming: "Gaming-Zimmer", chill: "Chill-Ecke", toilet: "Toilette", bedroom: "Schlafzimmer", bedroom2: "Gästezimmer", bathroom: "Badezimmer", office: "Arbeitszimmer", dining: "Esszimmer", storage: "Abstellraum", hallway: "Flur", hallway_up: "Flur OG", balcony: "Balkon", village_center: "Marktplatz", village_road: "Dorfstraße", cafe: "Café", shop: "Shop", post: "Post", park: "Park", rathaus: "Rathaus" };
   const PLAYER_R = 14;
-  // Solide Möbel (AABB). Alles hier blockiert; Deko ohne Eintrag ist begehbar.
+  // Solide Möbel (AABB). Zone/Floor beachten — nur aktuelle Zone blockiert.
   const WORLD_FURNITURE_SOLIDS = [
-    { x: 60, y: 60, w: 160, h: 26 },
-    { x: 252, y: 58, w: 40, h: 72 },
-    { x: 60, y: 150, w: 64, h: 56 },
-    { x: 174, y: 184, w: 52, h: 52 },
-    { x: 400, y: 120, w: 130, h: 44 },
-    { x: 425, y: 188, w: 80, h: 28 },
-    { x: 430, y: 58, w: 70, h: 18 },
-    { x: 566, y: 60, w: 40, h: 100 },
-    { x: 660, y: 90, w: 70, h: 26 },
-    { x: 745, y: 90, w: 70, h: 26 },
-    { x: 830, y: 90, w: 70, h: 26 },
-    { x: 685, y: 130, w: 20, h: 20 },
-    { x: 770, y: 130, w: 20, h: 20 },
-    { x: 855, y: 130, w: 20, h: 20 },
-    { x: 90, y: 470, w: 32, h: 32 },
-    { x: 160, y: 490, w: 32, h: 32 },
-    { x: 120, y: 440, w: 44, h: 24 },
-    { x: 700, y: 460, w: 30, h: 56 },
-    { x: 860, y: 480, w: 24, h: 24 },
+    { x: 60, y: 60, w: 160, h: 26, zone: "villa", floor: 0 },
+    { x: 252, y: 58, w: 40, h: 72, zone: "villa", floor: 0 },
+    { x: 60, y: 150, w: 64, h: 56, zone: "villa", floor: 0 },
+    { x: 174, y: 184, w: 52, h: 52, zone: "villa", floor: 0 },
+    { x: 400, y: 120, w: 130, h: 44, zone: "villa", floor: 0 },
+    { x: 425, y: 188, w: 80, h: 28, zone: "villa", floor: 0 },
+    { x: 430, y: 58, w: 70, h: 18, zone: "villa", floor: 0 },
+    { x: 566, y: 60, w: 40, h: 100, zone: "villa", floor: 0 },
+    { x: 660, y: 90, w: 70, h: 26, zone: "villa", floor: 0 },
+    { x: 745, y: 90, w: 70, h: 26, zone: "villa", floor: 0 },
+    { x: 830, y: 90, w: 70, h: 26, zone: "villa", floor: 0 },
+    { x: 685, y: 130, w: 20, h: 20, zone: "villa", floor: 0 },
+    { x: 770, y: 130, w: 20, h: 20, zone: "villa", floor: 0 },
+    { x: 855, y: 130, w: 20, h: 20, zone: "villa", floor: 0 },
+    { x: 90, y: 470, w: 32, h: 32, zone: "villa", floor: 0 },
+    { x: 160, y: 490, w: 32, h: 32, zone: "villa", floor: 0 },
+    { x: 120, y: 440, w: 44, h: 24, zone: "villa", floor: 0 },
+    { x: 700, y: 460, w: 30, h: 56, zone: "villa", floor: 0 },
+    { x: 860, y: 480, w: 24, h: 24, zone: "villa", floor: 0 },
+    // OG
+    { x: 60, y: 60, w: 120, h: 26, zone: "villa", floor: 1 },
+    { x: 340, y: 60, w: 80, h: 26, zone: "villa", floor: 1 },
+    { x: 500, y: 60, w: 80, h: 26, zone: "villa", floor: 1 },
+    // Dorf
+    { x: 360, y: 400, w: 240, h: 20, zone: "village", floor: 0 },
   ];
-  const WORLD_SOLIDS = WORLD.walls.concat(WORLD_FURNITURE_SOLIDS);
-  // Echte Raum-Geometrie (keine Nähe-Heuristik): spezifische Räume zuerst.
-  function worldRoomAt(x, y) {
-    if (x >= 36 && x <= 324 && y >= 36 && y <= 312) return "kitchen";
-    if (x >= 336 && x <= 624 && y >= 36 && y <= 312) return "living";
-    if (x >= 636 && x <= 924 && y >= 36 && y <= 312) return "gaming";
-    if (x >= 36 && x <= 288 && y >= 400 && y <= 564) return "chill";
+  function worldSolidsFor(zone, floor) {
+    const base = WORLD.walls.filter((w) => w.zone === zone && w.floor === floor);
+    const furn = WORLD_FURNITURE_SOLIDS.filter((s) => s.zone === zone && s.floor === floor);
+    const dyn = worldDynamicSolids.filter((s) => !s.zone || (s.zone === zone && s.floor === floor));
+    return base.concat(furn).concat(dyn);
+  }
+  // Echte Raum-Geometrie — Zone+Floor beachten. Villa OG hat eigene Räume, Dorf eigene.
+  function worldRoomAt(x, y, zone, floor) {
+    zone = zone || worldPlayer.zone || "villa";
+    floor = floor !== undefined ? floor : (worldPlayer.floor || 0);
+    if (zone === "village") {
+      if (x >= 640 && x <= 840 && y >= 380 && y <= 520) return "cafe";
+      if (x >= 740 && x <= 880 && y >= 120 && y <= 220) return "shop";
+      if (x >= 80 && x <= 220 && y >= 120 && y <= 220) return "post";
+      if (x >= 80 && x <= 280 && y >= 380 && y <= 520) return "park";
+      if (x >= 340 && x <= 620 && y >= 80 && y <= 180) return "rathaus";
+      if (x >= 340 && x <= 620 && y >= 220 && y <= 380) return "village_center";
+      return "village_road";
+    }
+    if (zone === "villa" && floor === 1) {
+      if (x >= 36 && x <= 296 && y >= 36 && y <= 216) return "bedroom";
+      if (x >= 296 && x <= 476 && y >= 36 && y <= 216) return "bedroom2";
+      if (x >= 476 && x <= 636 && y >= 36 && y <= 216) return "bathroom";
+      if (x >= 636 && x <= 924 && y >= 36 && y <= 120) return "balcony";
+      return "hallway_up";
+    }
+    // Villa EG
+    if (x >= 36 && x <= 256 && y >= 36 && y <= 216) return "kitchen";
+    if (x >= 256 && x <= 324 && y >= 36 && y <= 136) return "dining";
+    if (x >= 336 && x <= 596 && y >= 36 && y <= 216) return "living_room";
+    if (x >= 636 && x <= 924 && y >= 36 && y <= 216) return "gaming";
+    if (x >= 36 && x <= 126 && y >= 216 && y <= 300) return "toilet";
+    if (x >= 126 && x <= 324 && y >= 216 && y <= 300) return "chill";
+    if (x >= 216 && x <= 376 && y >= 380 && y <= 480) return "office";
+    if (x >= 376 && x <= 476 && y >= 380 && y <= 480) return "storage";
+    if (x >= 36 && x <= 216 && y >= 380 && y <= 564) return "entrance";
     return "lounge";
   }
-  // Kreis-gegen-AABB. Achsengetrennt aufgerufen -> Gleiten an Wänden statt Festhängen.
-  function worldHitsSolid(x, y) {
+  // Kreis-gegen-AABB. Zone/Floor filtern — nur aktuelle Zone blockiert.
+  function worldHitsSolid(x, y, zone, floor) {
+    zone = zone || worldPlayer.zone || "villa";
+    floor = floor !== undefined ? floor : (worldPlayer.floor || 0);
     const r = PLAYER_R;
-    const solids = WORLD_SOLIDS.concat(worldDynamicSolids);
+    const solids = worldSolidsFor(zone, floor);
     for (const s of solids) {
       const cx = Math.max(s.x, Math.min(x, s.x + s.w));
       const cy = Math.max(s.y, Math.min(y, s.y + s.h));
@@ -346,10 +450,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return false;
   }
-  const worldPlayer = { x: WORLD.spawn.x, y: WORLD.spawn.y, sitting: false, seatId: null, room: "lounge" };
+  const worldPlayer = { x: WORLD.spawn.x, y: WORLD.spawn.y, zone: WORLD.spawn.zone, floor: WORLD.spawn.floor, sitting: false, seatId: null, room: WORLD.spawn.room };
   const worldRemotes = new Map();
   let worldActive = false, worldRAF = 0, worldCtx = null, worldStarted = false, worldSelfBanned = false, worldResizeBound = false;
-  let lastWorldEmit = 0, lastEmittedRoom = null, lastEmittedSeat = undefined;
+  let lastWorldEmit = 0, lastEmittedRoom = null, lastEmittedZone = null, lastEmittedSeat = undefined;
   let worldFlashMsg = "", worldFlashUntil = 0;
 
   function worldNote(msg) { worldFlashMsg = msg; worldFlashUntil = Date.now() + 4000; }
@@ -358,44 +462,52 @@ document.addEventListener("DOMContentLoaded", () => {
     const entry = lastOnline.find((e) => e && e.username === me);
     return { avatar: entry?.avatar || "😀", color: entry?.color || "#79dce8" };
   }
-  // Senden bei Bewegung, sofort bei Raum-/Sitz-Wechsel (Voice reagiert schnell).
+  // Senden bei Bewegung, sofort bei Raum-/Zonen-/Sitz-Wechsel (Voice reagiert schnell).
   function worldEmitMove(force = false) {
     const now = Date.now();
     const roomChanged = worldPlayer.room !== lastEmittedRoom;
+    const zoneChanged = worldPlayer.zone !== lastEmittedZone;
     const seatChanged = worldPlayer.seatId !== lastEmittedSeat;
-    if (!force && !roomChanged && !seatChanged && now - lastWorldEmit < 250) return;
+    if (!force && !roomChanged && !zoneChanged && !seatChanged && now - lastWorldEmit < 250) return;
     lastWorldEmit = now;
     lastEmittedRoom = worldPlayer.room;
+    lastEmittedZone = worldPlayer.zone;
     lastEmittedSeat = worldPlayer.seatId;
     socket.emit("worldMove", {
       x: Math.round(worldPlayer.x),
       y: Math.round(worldPlayer.y),
       room: worldPlayer.room,
+      zone: worldPlayer.zone,
+      floor: worldPlayer.floor,
       seat: worldPlayer.seatId,
     });
   }
-  const worldDynamicSolids = []; // z.B. Café-Theke nach Completion (wächst mit der Stadt)
-  // ===== Interactables: datengetrieben {id, Typ, Position, Radius, Raum} =====
-  // Neue Objekte: Eintrag hier + ggf. Deko in worldBuildStatic + ggf. Solid.
-  // Interaktionstypen (erweiterbar): voice, sit, job, dropoff, shop, city, hub.
-  // Später möglich: open, close, use, sleep, work, buy, sell, read, toggle,
-  // enter, exit, build, repair, collect, deposit, withdraw.
+  const worldDynamicSolids = []; // z.B. Café-Theke im Dorf nach Completion
+  // ===== Interactables: datengetrieben {id, Typ, Position, Radius, Raum/Zone} =====
   const INTERACTABLES = [
-    { id: "exit_door", type: "voice", x: 480, y: 532, range: 48, room: "lounge" },
-    { id: "job_terminal", type: "job", x: 620, y: 505, range: 55, room: "lounge" },
-    { id: "market", type: "shop", shopId: "market", x: 350, y: 505, range: 60, room: "lounge" },
-    { id: "fridge", type: "shop", shopId: "fridge", x: 272, y: 150, range: 55, room: "kitchen" },
-    { id: "city_board", type: "city", x: 580, y: 548, range: 60, room: "lounge" },
-    { id: "drop_kitchen", type: "dropoff", spotId: "drop_kitchen", x: 140, y: 112, range: 55, room: "kitchen" },
-    { id: "drop_living", type: "dropoff", spotId: "drop_living", x: 620, y: 130, range: 55, room: "living" },
-    { id: "drop_gaming", type: "dropoff", spotId: "drop_gaming", x: 890, y: 150, range: 60, room: "gaming" },
-    { id: "drop_chill", type: "dropoff", spotId: "drop_chill", x: 150, y: 420, range: 55, room: "chill" },
-    { id: "comp_g1", type: "hub", x: 695, y: 140, range: 48, room: "gaming" },
-    { id: "comp_g2", type: "hub", x: 780, y: 140, range: 48, room: "gaming" },
-    { id: "comp_g3", type: "hub", x: 865, y: 140, range: 48, room: "gaming" },
+    // Villa EG
+    { id: "villa_exit", type: "zone", x: 120, y: 560, range: 45, room: "entrance", zone: "villa", floor: 0, toZone: "village", toPos: { x: 480, y: 500, zone: "village", floor: 0 } },
+    { id: "village_entry", type: "zone", x: 480, y: 500, range: 45, room: "village_center", zone: "village", floor: 0, toZone: "villa", toPos: { x: 120, y: 540, zone: "villa", floor: 0 } },
+    { id: "stairs_up", type: "stairs", x: 510, y: 360, range: 45, room: "lounge", zone: "villa", floor: 0, toFloor: 1, toPos: { x: 510, y: 360, zone: "villa", floor: 1 } },
+    { id: "stairs_down", type: "stairs", x: 510, y: 360, range: 45, room: "hallway_up", zone: "villa", floor: 1, toFloor: 0, toPos: { x: 510, y: 360, zone: "villa", floor: 0 } },
+    { id: "fridge", type: "shop", shopId: "fridge", x: 272, y: 150, range: 55, room: "kitchen", zone: "villa", floor: 0 },
+    { id: "drop_kitchen", type: "dropoff", spotId: "drop_kitchen", x: 140, y: 112, range: 55, room: "kitchen", zone: "villa", floor: 0 },
+    { id: "drop_chill", type: "dropoff", spotId: "drop_chill", x: 150, y: 250, range: 55, room: "chill", zone: "villa", floor: 0 },
+    { id: "comp_g1", type: "hub", x: 695, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    { id: "comp_g2", type: "hub", x: 780, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    { id: "comp_g3", type: "hub", x: 865, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    // Dorf — Jobs & Shops nur hier (Villa ist Wohnort, kein Jobcenter)
+    { id: "post_terminal", type: "job", x: 150, y: 170, range: 55, room: "post", zone: "village", floor: 0 },
+    { id: "shop_market", type: "shop", shopId: "market", x: 810, y: 170, range: 60, room: "shop", zone: "village", floor: 0 },
+    { id: "city_board", type: "city", x: 480, y: 140, range: 60, room: "rathaus", zone: "village", floor: 0 },
+    { id: "cafe_counter", type: "shop", shopId: "cafe", x: 740, y: 450, range: 55, room: "cafe", zone: "village", floor: 0, enabled: false },
+    { id: "drop_village_center", type: "dropoff", spotId: "drop_village_center", x: 480, y: 300, range: 55, room: "village_center", zone: "village", floor: 0 },
+    { id: "drop_shop", type: "dropoff", spotId: "drop_shop", x: 810, y: 170, range: 55, room: "shop", zone: "village", floor: 0 },
+    { id: "drop_post", type: "dropoff", spotId: "drop_post", x: 150, y: 170, range: 55, room: "post", zone: "village", floor: 0 },
+    { id: "drop_park", type: "dropoff", spotId: "drop_park", x: 180, y: 450, range: 55, room: "park", zone: "village", floor: 0 },
   ];
   for (const s of WORLD.seats) {
-    INTERACTABLES.push({ id: "chair_" + s.id, type: "sit", seatId: s.id, x: s.x, y: s.y, range: 40, room: s.room });
+    INTERACTABLES.push({ id: "chair_" + s.id, type: "sit", seatId: s.id, x: s.x, y: s.y, range: 40, room: s.room, zone: s.zone, floor: s.floor });
   }
   const dynamicInteractables = []; // z.B. Café-Theke nach Gebäude-Completion
   function allInteractables() { return INTERACTABLES.concat(dynamicInteractables); }
@@ -408,6 +520,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let best = null, bd = Infinity;
     for (const it of allInteractables()) {
       if (it.enabled === false) continue;
+      if (it.zone && it.zone !== worldPlayer.zone) continue;
+      if (it.floor !== undefined && it.floor !== worldPlayer.floor) continue;
       if (it.type === "dropoff" && !(activeJob && activeJob.targetId === it.spotId)) continue;
       const dx = worldPlayer.x - it.x, dy = worldPlayer.y - it.y;
       const d = Math.hypot(dx, dy);
@@ -419,6 +533,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!it) return "";
     switch (it.type) {
       case "voice": return roomId ? "[E] Voice verlassen" : "[E] Voice beitreten";
+      case "zone": return it.toZone === "village" ? "[E] Nach draußen" : "[E] Betreten";
+      case "stairs": return it.toFloor > worldPlayer.floor ? "[E] Nach oben" : "[E] Nach unten";
       case "sit": return worldPlayer.sitting ? "[E] Aufstehen" : "[E] Hinsetzen";
       case "job": return activeJob ? "[E] Auftrag ansehen" : "[E] Job annehmen";
       case "dropoff": return "[E] Lieferung abgeben";
@@ -476,6 +592,37 @@ document.addEventListener("DOMContentLoaded", () => {
         socket.emit("cityInfo");
         openGameModal("cityModal");
         break;
+      case "zone": {
+        const to = it.toPos;
+        if (!to) break;
+        worldPlayer.x = to.x;
+        worldPlayer.y = to.y;
+        worldPlayer.zone = to.zone;
+        worldPlayer.floor = to.floor;
+        worldPlayer.room = worldRoomAt(to.x, to.y, to.zone, to.floor);
+        worldPlayer.sitting = false;
+        worldPlayer.seatId = null;
+        worldStatic = null;
+        worldCam.x = to.x;
+        worldCam.y = to.y;
+        worldEmitMove(true);
+        worldNote(it.toZone === "village" ? "Dorf betreten." : "Villa betreten.");
+        break;
+      }
+      case "stairs": {
+        const to = it.toPos;
+        if (!to) break;
+        worldPlayer.x = to.x;
+        worldPlayer.y = to.y;
+        worldPlayer.floor = to.toFloor;
+        worldPlayer.room = worldRoomAt(to.x, to.y, worldPlayer.zone, to.toFloor);
+        worldPlayer.sitting = false;
+        worldPlayer.seatId = null;
+        worldStatic = null;
+        worldEmitMove(true);
+        worldNote(to.toFloor > 0 ? "Obergeschoss." : "Erdgeschoss.");
+        break;
+      }
       case "hub":
         openGameModal("computerModal");
         renderComputer();
@@ -521,14 +668,13 @@ document.addEventListener("DOMContentLoaded", () => {
     worldPlayer.y = Math.max(PLAYER_R, Math.min(WORLD.h - PLAYER_R, worldPlayer.y));
   }
   function worldApplyInput(dt) {
+    if (worldPlayer.sitting) return false; // Sitzen blockiert Bewegung — E zum Aufstehen
     let dx = (worldKeys.right ? 1 : 0) - (worldKeys.left ? 1 : 0);
     let dy = (worldKeys.down ? 1 : 0) - (worldKeys.up ? 1 : 0);
     if (!dx && !dy) return false;
     const len = Math.hypot(dx, dy);
-    dx /= len; dy /= len; // diagonal normalisiert: keine Turbo-Diagonalen
-    worldPlayer.sitting = false;
-    worldPlayer.seatId = null;
-    worldJoinFresh = false; // selbst gelaufen -> kein Server-Spawn mehr
+    dx /= len; dy /= len;
+    worldJoinFresh = false;
     const sp = 175 * dt;
     worldTryMove(dx * sp, dy * sp);
     return true;
@@ -538,10 +684,12 @@ document.addEventListener("DOMContentLoaded", () => {
       (m) => m.seat === seat.id || Math.hypot(m.x - seat.x, m.y - seat.y) < 30,
     );
   }
-  // Spieler: Avatar-Kreis, Name DARÜBER, Self-Glow, Speaking-Ring. Kein Emoji-Deko.
+  // Spieler: Avatar-Kreis, Name DARÜBER, Self-Glow, Speaking-Ring. Sitting sichtbar.
   function worldDrawCharacter(ctx, f) {
-    const { x, y } = f;
+    const { x } = f;
+    let y = f.y;
     const ring = f.banned ? "#ff2d55" : f.color || "#79dce8";
+    if (f.sitting) y += 6; // sitzt tiefer, auf Stuhl
     if (f.speaking && !WORLD_REDUCED) {
       const pr = 26 + 3 * Math.sin(performance.now() / 220);
       ctx.save();
@@ -560,27 +708,40 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
+    if (f.sitting) {
+      ctx.save();
+      ctx.fillStyle = "rgba(90,61,42,.9)";
+      ctx.fillRect(x - 14, y + 10, 28, 6);
+      ctx.fillStyle = "rgba(60,40,28,.9)";
+      ctx.fillRect(x - 10, y + 14, 20, 4);
+      ctx.restore();
+    }
     ctx.save();
     ctx.beginPath();
-    ctx.arc(x, y, 19, 0, Math.PI * 2);
-    ctx.fillStyle = "#101c36";
+    ctx.arc(x, y, f.sitting ? 16 : 19, 0, Math.PI * 2);
+    ctx.fillStyle = f.sitting ? "#1a2744" : "#101c36";
     ctx.fill();
     ctx.lineWidth = f.self ? 3.5 : 2.5;
     ctx.strokeStyle = ring;
     ctx.stroke();
-    ctx.font = "23px serif";
+    ctx.font = f.sitting ? "19px serif" : "23px serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(f.avatar || "?", x, y + 1);
+    ctx.fillText(f.avatar || "?", x, y + (f.sitting ? 0 : 1));
     ctx.font = "600 12px 'Hanken Grotesk', sans-serif";
     const tw = ctx.measureText(f.name).width;
     const bw = tw + 14;
-    const ny = y - 40;
+    const ny = y - (f.sitting ? 36 : 40);
     ctx.fillStyle = "rgba(4,16,31,.85)";
     if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x - bw / 2, ny - 9, bw, 18, 9); ctx.fill(); }
     else ctx.fillRect(x - bw / 2, ny - 9, bw, 18);
     ctx.fillStyle = f.banned ? "#ff8d98" : f.color || "#fff";
     ctx.fillText(f.name, x, ny);
+    if (f.sitting) {
+      ctx.fillStyle = "rgba(255,209,102,.9)";
+      ctx.font = "600 9px 'Hanken Grotesk', sans-serif";
+      ctx.fillText("SITZT", x, y + 28);
+    }
     ctx.restore();
   }
   const WORLD_REDUCED = Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -630,30 +791,51 @@ document.addEventListener("DOMContentLoaded", () => {
       y: (y - worldCam.y) * worldCam.zoom + view.h / 2,
     };
   }
-  // Statische Ebene (einmal rendern, dann nur blitten) für Detailreichtum ohne Kosten
-  // ---- Statische Ebene: Boden, Räume, Wände, Türen, Deko (einmalig, 1920x1200) ----
-  // Keine Emoji-Deko: reine Shapes, konsistente Perspektive, ruhige Farben.
+  // Statische Ebene — zone/floor-spezifisch gecached
+  const worldStaticCache = new Map();
   function worldBuildStatic() {
+    const key = `${worldPlayer.zone}_${worldPlayer.floor}`;
+    if (worldStaticCache.has(key)) return worldStaticCache.get(key);
     const off = document.createElement("canvas");
     off.width = WORLD.w * WORLD_SS;
     off.height = WORLD.h * WORLD_SS;
     const ctx = off.getContext("2d");
     const W = WORLD;
+    const zone = worldPlayer.zone, floor = worldPlayer.floor;
     ctx.setTransform(WORLD_SS, 0, 0, WORLD_SS, 0, 0);
-    // Boden mit Verlauf
+    // Boden mit Verlauf (für Dorf etwas grüner)
     const floorGrad = ctx.createLinearGradient(0, 0, 0, W.h);
-    floorGrad.addColorStop(0, "#41301f");
-    floorGrad.addColorStop(1, "#33261a");
+    if (zone === "village") {
+      floorGrad.addColorStop(0, "#2a3a2a");
+      floorGrad.addColorStop(1, "#1e2e1e");
+    } else {
+      floorGrad.addColorStop(0, "#41301f");
+      floorGrad.addColorStop(1, "#33261a");
+    }
     ctx.fillStyle = floorGrad;
     ctx.fillRect(0, 0, W.w, W.h);
-    // Raumtönungen: Lounge zuerst, speziellere Räume darüber
-    for (const r of W.rooms) {
-      if (r.id === "lounge") { ctx.fillStyle = r.floor; ctx.fillRect(r.x, r.y, r.w, r.h); }
-    }
-    for (const r of W.rooms) {
-      if (r.id === "lounge") continue;
-      ctx.fillStyle = r.floor;
+    // Raumtönungen nur aktuelle Zone/Floor
+    const rooms = W.rooms.filter((r) => r.zone === zone && r.floor === floor);
+    const lounge = rooms.find((r) => r.id === "lounge" || r.id === "hallway_up" || r.id === "village_center");
+    if (lounge) { ctx.fillStyle = lounge.floorColor || lounge.floor; ctx.fillRect(lounge.x, lounge.y, lounge.w, lounge.h); }
+    for (const r of rooms) {
+      if (r === lounge) continue;
+      ctx.fillStyle = r.floorColor || r.floor;
       ctx.fillRect(r.x, r.y, r.w, r.h);
+    }
+    // Dorf-Straßen
+    if (zone === "village") {
+      ctx.fillStyle = "rgba(80,80,80,.9)";
+      ctx.fillRect(36, 300, 888, 60);
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      for (let x = 50; x < 900; x += 40) ctx.fillRect(x, 328, 20, 4);
+      // Dorf-Häuser Umrisse
+      ctx.strokeStyle = "rgba(255,255,255,.15)"; ctx.lineWidth = 2;
+      for (const r of rooms) {
+        if (["post","shop","rathaus","cafe","park"].includes(r.id)) {
+          ctx.strokeRect(r.x, r.y, r.w, r.h);
+        }
+      }
     }
     // Dielen mit versetzten Fugen
     ctx.strokeStyle = "rgba(0,0,0,.25)";
@@ -678,8 +860,8 @@ document.addEventListener("DOMContentLoaded", () => {
     rug(162, 505, 105, 42, "rgba(255,190,120,.12)", "rgba(255,190,120,.28)");
     ctx.fillStyle = "rgba(160,60,60,.22)"; wRR(ctx, 360, 354, 240, 16, 8); ctx.fill();
     ctx.fillStyle = "rgba(90,61,42,.8)"; wRR(ctx, 450, 500, 60, 18, 4); ctx.fill();
-    // Wände: Verlauf, Kantenlicht, Fußleiste
-    for (const wl of W.walls) {
+    // Wände: nur aktuelle Zone/Floor
+    for (const wl of W.walls.filter((w) => w.zone === zone && w.floor === floor)) {
       const wg = ctx.createLinearGradient(0, wl.y, 0, wl.y + wl.h);
       wg.addColorStop(0, "#243c6e");
       wg.addColorStop(1, "#16264a");
@@ -690,8 +872,8 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle = "rgba(0,0,0,.4)";
       ctx.fillRect(wl.x, wl.y + wl.h - 3, wl.w, 3);
     }
-    // Türen: Pfosten + Schwelle
-    for (const d of W.doors) {
+    // Türen: nur aktuelle Zone/Floor
+    for (const d of W.doors.filter((d) => d.zone === zone && d.floor === floor)) {
       ctx.fillStyle = "#4a3524";
       ctx.fillRect(d.x - 5, d.y - 6, 7, 32);
       ctx.fillRect(d.x + d.w - 2, d.y - 6, 7, 32);
@@ -700,6 +882,19 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillRect(d.x + d.w - 2, d.y - 6, 7, 3);
       ctx.fillStyle = "rgba(120,90,70,.55)";
       wRR(ctx, d.x + 6, d.y + 2, d.w - 12, 16, 4); ctx.fill();
+    }
+    // Zone-Übergänge: Villa-Ausgang (grün), Dorf-Eingang (blau)
+    if (zone === "villa" && floor === 0) {
+      ctx.fillStyle = "rgba(100,200,120,.9)";
+      ctx.fillRect(115, 552, 60, 12);
+      ctx.fillStyle = "#fff"; ctx.font = "700 10px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("AUSGANG → DORF", 145, 548);
+    }
+    if (zone === "village") {
+      ctx.fillStyle = "rgba(120,160,255,.9)";
+      ctx.fillRect(455, 490, 50, 12);
+      ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+      ctx.fillText("← VILLA", 480, 487);
     }
     // Raumbeschriftungen dezent auf dem Boden (Environment-Labels, kein Emoji)
     ctx.fillStyle = "rgba(255,235,210,.38)";
@@ -778,30 +973,32 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "#c94f4f"; ctx.beginPath(); ctx.arc(576, 536, 2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#3f6ea5"; ctx.beginPath(); ctx.arc(583, 543, 2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#ffd166"; ctx.beginPath(); ctx.arc(578, 547, 2, 0, Math.PI * 2); ctx.fill();
-    // Café-Grundstück: Baustelle oder fertiges Gebäude (aus City-State)
-    if (completedBuildings.has("cafe")) {
-      ctx.fillStyle = "rgba(0,0,0,.3)"; wRR(ctx, 758, 468, 114, 32, 6); ctx.fill();
-      ctx.fillStyle = "#6b4a2c"; wRR(ctx, 760, 470, 110, 28, 6); ctx.fill();
-      ctx.fillStyle = "#a97e4e"; wRR(ctx, 760, 470, 110, 8, 4); ctx.fill();
-      ctx.fillStyle = "#3f6ea5"; ctx.fillRect(800, 478, 24, 12);
-      ctx.fillStyle = "#e8e0d0"; ctx.fillRect(830, 478, 8, 6);
-      for (const [tx, ty] of [[780, 520], [850, 520]]) {
-        ctx.fillStyle = "#7a5636"; ctx.beginPath(); ctx.ellipse(tx, ty, 16, 11, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#a97e4e"; ctx.beginPath(); ctx.ellipse(tx, ty - 2, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // Café-Grundstück: nur im Dorf (Zone village), Baustelle oder fertiges Gebäude
+    if (zone === "village") {
+      if (completedBuildings.has("cafe")) {
+        ctx.fillStyle = "rgba(0,0,0,.3)"; wRR(ctx, 638, 378, 114, 32, 6); ctx.fill();
+        ctx.fillStyle = "#6b4a2c"; wRR(ctx, 640, 380, 110, 28, 6); ctx.fill();
+        ctx.fillStyle = "#a97e4e"; wRR(ctx, 640, 380, 110, 8, 4); ctx.fill();
+        ctx.fillStyle = "#3f6ea5"; ctx.fillRect(680, 388, 24, 12);
+        ctx.fillStyle = "#e8e0d0"; ctx.fillRect(710, 388, 8, 6);
+        for (const [tx, ty] of [[660, 430], [730, 430]]) {
+          ctx.fillStyle = "#7a5636"; ctx.beginPath(); ctx.ellipse(tx, ty, 16, 11, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "#a97e4e"; ctx.beginPath(); ctx.ellipse(tx, ty - 2, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        const cg = ctx.createRadialGradient(695, 362, 4, 695, 362, 40);
+        cg.addColorStop(0, "rgba(255,210,140,.5)"); cg.addColorStop(1, "rgba(255,210,140,0)");
+        ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(695, 362, 40, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ffd98c"; ctx.font = "700 12px 'Hanken Grotesk', sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("CAFÉ", 695, 366);
+      } else {
+        ctx.setLineDash([7, 5]);
+        ctx.strokeStyle = "rgba(255,209,102,.8)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(620, 360, 170, 110);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ffd98c"; ctx.font = "700 11px 'Hanken Grotesk', sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("CAFÉ-BAUSTELLE", 705, 410);
       }
-      const cg = ctx.createRadialGradient(815, 452, 4, 815, 452, 40);
-      cg.addColorStop(0, "rgba(255,210,140,.5)"); cg.addColorStop(1, "rgba(255,210,140,0)");
-      ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(815, 452, 40, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#ffd98c"; ctx.font = "700 12px 'Hanken Grotesk', sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("CAFÉ", 815, 456);
-    } else {
-      ctx.setLineDash([7, 5]);
-      ctx.strokeStyle = "rgba(255,209,102,.8)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(740, 440, 170, 110);
-      ctx.setLineDash([]);
-      ctx.fillStyle = "#ffd98c"; ctx.font = "700 11px 'Hanken Grotesk', sans-serif"; ctx.textAlign = "center";
-      ctx.fillText("CAFÉ-BAUSTELLE", 825, 500);
     }
     // Vignette
     const vg = ctx.createRadialGradient(480, 300, 200, 480, 300, 640);
@@ -947,7 +1144,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const canvas = $("worldCanvas");
     if (!ctx || !canvas) return;
     const view = worldViewSize();
-    if (!worldStatic) worldStatic = worldBuildStatic();
+    const key = `${worldPlayer.zone}_${worldPlayer.floor}`;
+    let staticCanvas = worldStaticCache.get(key);
+    if (!staticCanvas) {
+      staticCanvas = worldBuildStatic();
+      worldStaticCache.set(key, staticCanvas);
+    }
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const bw = canvas.width, bh = canvas.height;
     const zoom = worldCam.zoom;
@@ -956,7 +1158,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "#060b16";
     ctx.fillRect(0, 0, bw, bh);
     const SS = WORLD_SS;
-    ctx.drawImage(worldStatic, (worldCam.x - vw / 2) * SS, (worldCam.y - vh / 2) * SS, vw * SS, vh * SS, 0, 0, bw, bh);
+    ctx.drawImage(staticCanvas, (worldCam.x - vw / 2) * SS, (worldCam.y - vh / 2) * SS, vw * SS, vh * SS, 0, 0, bw, bh);
     const s = dpr * zoom;
     ctx.setTransform(s, 0, 0, s, dpr * (view.w / 2 - worldCam.x * zoom), dpr * (view.h / 2 - worldCam.y * zoom));
     // Dynamik: Tür-Puls, Uhrzeiger, TV-Flimmern
@@ -1285,16 +1487,19 @@ document.addEventListener("DOMContentLoaded", () => {
       if (id === "cafe" && !completedBuildings.has("cafe")) {
         completedBuildings.add("cafe");
         if (!worldDynamicSolids.some((s) => s.id === "cafe_counter")) {
-          worldDynamicSolids.push({ id: "cafe_counter", x: 760, y: 470, w: 110, h: 28 });
+          worldDynamicSolids.push({ id: "cafe_counter", x: 640, y: 380, w: 110, h: 28, zone: "village", floor: 0 });
           changed = true;
         }
         if (!dynamicInteractables.some((it) => it.id === "cafe_counter")) {
-          dynamicInteractables.push({ id: "cafe_counter", type: "shop", shopId: "cafe", x: 815, y: 515, range: 55, room: "lounge" });
+          dynamicInteractables.push({ id: "cafe_counter", type: "shop", shopId: "cafe", x: 740, y: 450, range: 55, room: "cafe", zone: "village", floor: 0 });
           changed = true;
         }
       }
     }
-    if (changed) worldStatic = null;
+    if (changed) {
+      // Dorf-Cache invalidieren
+      worldStaticCache.delete("village_0");
+    }
   }
   function renderWallet() {
     const bal = $("walletBalance");
