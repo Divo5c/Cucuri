@@ -403,6 +403,9 @@ document.addEventListener("DOMContentLoaded", () => {
     { x: 390, y: 410, w: 70, h: 50, zone: "villa", floor: 0 },
     // Dorf
     { x: 360, y: 400, w: 240, h: 20, zone: "village", floor: 0 },
+    { x: 70, y: 130, w: 60, h: 40, zone: "village", floor: 0 },
+    { x: 670, y: 130, w: 60, h: 40, zone: "village", floor: 0 },
+    { x: 370, y: 60, w: 60, h: 40, zone: "village", floor: 0 },
   ];
   function worldSolidsFor(zone, floor) {
     const base = WORLD.walls.filter((w) => w.zone === zone && w.floor === floor);
@@ -458,6 +461,106 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const worldPlayer = { x: WORLD.spawn.x, y: WORLD.spawn.y, zone: WORLD.spawn.zone, floor: WORLD.spawn.floor, sitting: false, seatId: null, room: WORLD.spawn.room };
   const worldRemotes = new Map();
+  // NPC Foundation — zone/floor-aware, server-authority vorbereitet
+  const NPCS = [
+    { id: "npc_post", name: "Postmitarbeiter", zone: "village", floor: 0, x: 150, y: 170, target: "shop", state: "working", speed: 45, path: [] },
+    { id: "npc_anna", name: "Anna", zone: "village", floor: 0, x: 480, y: 300, target: "park", state: "walking", speed: 50, path: [] },
+    { id: "npc_ben", name: "Ben", zone: "village", floor: 0, x: 810, y: 170, target: "cafe", state: "walking", speed: 48, path: [] },
+    { id: "npc_cafe", name: "Café-Mitarbeiter", zone: "village", floor: 0, x: 740, y: 450, target: "cafe", state: "working", speed: 0, path: [] },
+  ];
+  const VILLAGE_WAYPOINTS = {
+    post: { x: 150, y: 170, zone: "village", floor: 0 },
+    shop: { x: 810, y: 170, zone: "village", floor: 0 },
+    cafe: { x: 740, y: 450, zone: "village", floor: 0 },
+    park: { x: 180, y: 450, zone: "village", floor: 0 },
+    rathaus: { x: 480, y: 140, zone: "village", floor: 0 },
+    village_center: { x: 480, y: 300, zone: "village", floor: 0 },
+    villa_gate: { x: 480, y: 500, zone: "village", floor: 0 },
+    street_north: { x: 480, y: 200, zone: "village", floor: 0 },
+    street_south: { x: 480, y: 400, zone: "village", floor: 0 },
+  };
+  // A* Navigation — Grid 32px, berücksichtigt Wände/Möbel/Türen/Zonen/Floors
+  function findPathAStar(start, goal, zone, floor) {
+    zone = zone || worldPlayer.zone; floor = floor !== undefined ? floor : worldPlayer.floor;
+    if (zone !== goal.zone || floor !== goal.floor) return null; // Zone-Wechsel braucht Transition Node
+    const GRID = 32;
+    const cols = Math.ceil(WORLD.w / GRID), rows = Math.ceil(WORLD.h / GRID);
+    const toCell = (p) => ({ c: Math.floor(p.x / GRID), r: Math.floor(p.y / GRID) });
+    const s = toCell(start), g = toCell(goal);
+    const key = (c, r) => `${c},${r}`;
+    const isBlocked = (c, r) => {
+      const x = c * GRID + GRID/2, y = r * GRID + GRID/2;
+      if (x < 0 || x >= WORLD.w || y < 0 || y >= WORLD.h) return true;
+      return worldHitsSolid(x, y, zone, floor);
+    };
+    if (isBlocked(s.c, s.r) || isBlocked(g.c, g.r)) return null;
+    const open = [{ c: s.c, r: s.r, g: 0, h: Math.abs(g.c - s.c) + Math.abs(g.r - s.r), parent: null }];
+    const closed = new Set();
+    const heuristic = (c, r) => Math.abs(g.c - c) + Math.abs(g.r - r);
+    while (open.length) {
+      open.sort((a, b) => (a.g + a.h) - (b.g + b.h));
+      const cur = open.shift();
+      const curKey = key(cur.c, cur.r);
+      if (closed.has(curKey)) continue;
+      closed.add(curKey);
+      if (cur.c === g.c && cur.r === g.r) {
+        const path = [];
+        let n = cur;
+        while (n) { path.unshift({ x: n.c * GRID + GRID/2, y: n.r * GRID + GRID/2 }); n = n.parent; }
+        return path;
+      }
+      for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nc = cur.c + dc, nr = cur.r + dr;
+        const nKey = key(nc, nr);
+        if (closed.has(nKey) || nc < 0 || nr < 0 || nc >= cols || nr >= rows || isBlocked(nc, nr)) continue;
+        const ng = cur.g + 1;
+        let existing = open.find((n) => n.c === nc && n.r === nr);
+        if (!existing) open.push({ c: nc, r: nr, g: ng, h: heuristic(nc, nr), parent: cur });
+        else if (ng < existing.g) { existing.g = ng; existing.parent = cur; }
+      }
+    }
+    return null;
+  }
+  function navTo(target, zone, floor) {
+    zone = zone || worldPlayer.zone; floor = floor !== undefined ? floor : worldPlayer.floor;
+    const start = { x: worldPlayer.x, y: worldPlayer.y };
+    const goal = typeof target === "string" ? VILLAGE_WAYPOINTS[target] : target;
+    if (!goal) return null;
+    return findPathAStar(start, goal, zone, floor);
+  }
+  function updateNPCs(dt) {
+    const wpKeys = Object.keys(VILLAGE_WAYPOINTS);
+    for (const npc of NPCS) {
+      if (npc.zone !== worldPlayer.zone || npc.floor !== worldPlayer.floor) continue; // Streaming: nur gleiche Zone
+      if (npc.id === "npc_cafe" && !completedBuildings.has("cafe")) continue; // Café-Mitarbeiter nur wenn fertig
+      if (!npc.path || npc.path.length === 0) {
+        // Neues Ziel wählen
+        const curWp = npc.target;
+        let next;
+        do { next = wpKeys[Math.floor(Math.random() * wpKeys.length)]; } while (next === curWp && wpKeys.length > 1);
+        npc.target = next;
+        const goal = VILLAGE_WAYPOINTS[next];
+        npc.path = findPathAStar({ x: npc.x, y: npc.y }, goal, npc.zone, npc.floor) || [];
+        npc.state = npc.path.length ? "walking" : "idle";
+      }
+      if (npc.path && npc.path.length) {
+        const tgt = npc.path[0];
+        const dx = tgt.x - npc.x, dy = tgt.y - npc.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 4) { npc.path.shift(); if (!npc.path.length) npc.state = "idle"; }
+        else {
+          const step = npc.speed * dt;
+          npc.x += (dx / dist) * step;
+          npc.y += (dy / dist) * step;
+          npc.state = "walking";
+        }
+      } else {
+        // Idle → nach 2-5s wieder los
+        if (!npc._idleUntil) npc._idleUntil = Date.now() + 2000 + Math.random() * 3000;
+        if (Date.now() > npc._idleUntil) { npc._idleUntil = null; npc.path = []; }
+      }
+    }
+  }
   let worldActive = false, worldRAF = 0, worldCtx = null, worldStarted = false, worldSelfBanned = false, worldResizeBound = false;
   let lastWorldEmit = 0, lastEmittedRoom = null, lastEmittedZone = null, lastEmittedSeat = undefined;
   let worldFlashMsg = "", worldFlashUntil = 0;
@@ -643,8 +746,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeGameModals() {
     document.querySelectorAll(".game-modal.active").forEach((m) => m.classList.remove("active"));
   }
-  // NPC-Architektur (Platzhalter für später: id, Name, Position, Rolle, Interaktionen)
-  const NPCS = [];
   // Sound-Architektur (Platzhalter; Voice-Audio bleibt getrennt)
   function playSound(name) { void name; }
   // ===== Input: WASD + Pfeile (kein Click-to-Move). Tippen blockiert nie. =====
@@ -1203,6 +1304,51 @@ document.addEventListener("DOMContentLoaded", () => {
       c.fillStyle = "#2f7a4d"; c.beginPath(); c.arc(92, 516, 12, 0, Math.PI * 2); c.fill();
       c.fillStyle = "#3f9a5d"; c.beginPath(); c.arc(86, 510, 6, 0, Math.PI * 2); c.fill();
     } },
+    // Dorf-Erweiterung: zusätzliche Bäume (15+), Laternen (10+), Bänke (8+), Zäune, Briefkästen, Mülleimer
+    { y: 280, draw: (c) => {
+      for (const [x,y] of [[320,280],[400,270],[500,285],[600,275],[750,285],[850,275],[120,320],[200,320],[300,320],[450,280],[650,280],[750,320],[850,320],[100,380],[200,380]]) {
+        c.fillStyle = "#2f5a2f"; c.beginPath(); c.arc(x, y, 14, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#1e3a1e"; c.beginPath(); c.arc(x+4, y+4, 6, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "#5a3d1e"; c.fillRect(x-3, y+10, 6, 12);
+      }
+    } },
+    { y: 330, draw: (c) => {
+      for (const x of [80,180,280,380,480,580,680,780,880,120]) {
+        c.fillStyle = "#3a3a3a"; c.fillRect(x-2, 315, 4, 18);
+        c.fillStyle = "#ffd98c"; c.beginPath(); c.arc(x, 310, 7, 0, Math.PI * 2); c.fill();
+        c.fillStyle = "rgba(255,220,140,.25)"; c.beginPath(); c.arc(x, 310, 16, 0, Math.PI * 2); c.fill();
+      }
+    } },
+    { y: 470, draw: (c) => {
+      for (const [x,y] of [[120,470],[200,470],[400,470],[500,470],[600,470],[700,470],[800,470],[850,470]]) {
+        c.fillStyle = "#6b4a2c"; c.fillRect(x-18, y, 36, 7);
+        c.fillStyle = "#3a2c1c"; c.fillRect(x-18, y+7, 3, 10); c.fillRect(x+15, y+7, 3, 10);
+      }
+      // Zäune Dorf
+      c.strokeStyle = "#8a6b4a"; c.lineWidth = 2;
+      for (const [x,y,w] of [[80,400,60],[160,400,60],[700,400,60],[780,400,60]]) {
+        c.strokeRect(x, y, w, 20);
+        for (let ix=x+15; ix<x+w; ix+=15) { c.beginPath(); c.moveTo(ix, y); c.lineTo(ix, y+20); c.stroke(); }
+      }
+      // Briefkästen + Mülleimer
+      for (const [x,y] of [[150,180],[810,180],[480,150]]) {
+        c.fillStyle = "#c96a6a"; wRR(c, x-6, y-8, 12, 16, 2); c.fill();
+        c.fillStyle = "#fff"; c.fillRect(x-2, y-2, 4, 6);
+      }
+      for (const [x,y] of [[100,320],[800,320],[480,400]]) {
+        c.fillStyle = "#3a3a3a"; wRR(c, x-6, y-6, 12, 16, 3); c.fill();
+        c.fillStyle = "#5a5a5a"; c.fillRect(x-4, y-4, 8, 4);
+      }
+    } },
+    // Dorf-Häuser (3-5) mit Gärten
+    { y: 180, draw: (c) => {
+      for (const [hx,hy] of [[100,150],[700,150],[400,80]]) {
+        c.fillStyle = "#8a6b4a"; c.fillRect(hx-30, hy-20, 60, 40);
+        c.fillStyle = "#6b4a2c"; c.beginPath(); c.moveTo(hx-35, hy-20); c.lineTo(hx, hy-35); c.lineTo(hx+35, hy-20); c.closePath(); c.fill();
+        c.fillStyle = "#4a3524"; c.fillRect(hx-10, hy+5, 20, 15);
+        c.fillStyle = "#a0c4d0"; c.fillRect(hx-20, hy-10, 12, 12); c.fillRect(hx+8, hy-10, 12, 12);
+      }
+    } },
   );
   const worldSpeaking = new Map();
   function worldDraw() {
@@ -1269,6 +1415,12 @@ document.addEventListener("DOMContentLoaded", () => {
       items.push({ y: worldPlayer.y, draw: () => worldDrawCharacter(ctx, { x: worldPlayer.x, y: worldPlayer.y, avatar: me.avatar, name: selfName, color: me.color, banned: worldSelfBanned, self: true, sitting: worldPlayer.sitting, speaking: worldSpeaking.get("local") === true }) });
     }
     worldRemotes.forEach((m, id) => items.push({ y: m.y, draw: () => worldDrawCharacter(ctx, { x: m.x, y: m.y, avatar: m.avatar, name: m.username, color: m.color, banned: Boolean(m.banned || m.tempBanned), speaking: worldSpeaking.get(id) === true, sitting: Boolean(m.seat) }) }));
+    // NPCs — nur gleiche Zone/Floor, Dorf-NPCs nur wenn Café fertig falls nötig
+    for (const npc of NPCS) {
+      if (npc.zone !== worldPlayer.zone || npc.floor !== worldPlayer.floor) continue;
+      if (npc.id === "npc_cafe" && !completedBuildings.has("cafe")) continue;
+      items.push({ y: npc.y, draw: () => worldDrawCharacter(ctx, { x: npc.x, y: npc.y, avatar: "🤖", name: npc.name, color: "#b8a9ff", speaking: false, sitting: npc.state === "sitting" }) });
+    }
     items.sort((a, b) => a.y - b.y);
     for (const it of items) it.draw();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1287,6 +1439,7 @@ document.addEventListener("DOMContentLoaded", () => {
       worldEmitMove(false);
     }
     updateInteractPrompt();
+    updateNPCs(dt);
     worldRemotes.forEach((m) => {
       if (m.tx === undefined) { m.tx = m.x; m.ty = m.y; }
       m.x += (m.tx - m.x) * 0.15;
