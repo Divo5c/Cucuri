@@ -14,13 +14,14 @@
 | `MONGO_URI` | MongoDB Atlas Connection String | `mongodb+srv://...` **(secret, nie committen)** |
 | `PUBLIC_WORLD_ENABLED` | `false` = nur Divo sieht Welt, `true` = alle | `false` |
 | `ALLOW_TEST_BYPASS` | Nur für E2E `Tmp*` Welt-Bypass, **Production `false`/unset** | nicht setzen |
+| `CORS_ORIGIN` | Komma-getrennte erlaubte Origins für Production, z.B. Render-Domain | `https://cucuri.onrender.com` |
 | `NODE_VERSION` | Pinnt Node | `22.22.1` |
 
 **Niemals committen:** `MONGO_URI`, `TURN_*`, `ADMIN_SECRET` falls vorhanden.
 
 ## CORS / HTTPS / WebSocket
 - Render terminiert HTTPS, `socket.io` nutzt `wss://` automatisch.
-- `cors: { origin: "*" }` in `server.js` — für Production auf eigene Domain einschränken, wenn gewünscht.
+- `server.js` nutzt `CORS_ORIGIN` (komma-getrennt) falls gesetzt, sonst `NODE_ENV=production` → `origin: true` (keine Wildcard), Development → `origin: "*"` (localhost).
 
 ## Voice / WebRTC
 - Signaling (`voiceRoomsList`, `joinVoiceRoom`, `offer/answer/ICE`, `voicePresence`) funktioniert hinter Render-HTTPS via `wss`.

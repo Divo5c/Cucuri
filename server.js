@@ -16,8 +16,19 @@ function isWorldAllowed(username) {
 
 const app = express();
 const server = http.createServer(app);
+// Production: keine Wildcard-Origin. Render-Domain via ENV CORS_ORIGIN konfigurierbar, lokal weiterhin "*" für Dev.
+const corsOriginEnv = process.env.CORS_ORIGIN || process.env.CORS_ALLOWED_ORIGIN;
+let corsOrigin;
+if (corsOriginEnv) {
+  const list = corsOriginEnv.split(",").map((s) => s.trim()).filter(Boolean);
+  corsOrigin = list.length === 1 ? list[0] : list;
+} else if (process.env.NODE_ENV === "production") {
+  corsOrigin = true; // reflect request origin (same-origin), keine Wildcard
+} else {
+  corsOrigin = "*"; // Development: localhost
+}
 const io = socketIo(server, {
-  cors: { origin: "*" },
+  cors: { origin: corsOrigin },
 });
 
 // Static

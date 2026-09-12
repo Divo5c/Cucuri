@@ -17,6 +17,8 @@ services:
       - key: PUBLIC_WORLD_ENABLED
         value: "false"
         sync: false
+      - key: CORS_ORIGIN
+        sync: false
       # Optional: STUN/TURN für Voice hinter restriktiven NATs
       # - key: STUN_URL
       #   value: stun:stun.l.google.com:19302
