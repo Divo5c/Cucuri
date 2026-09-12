@@ -119,11 +119,11 @@ for (const shop of Object.values(SHOPS)) {
 }
 // Lieferziele: nur im Dorf (Postbotenjob) — Villa ist Wohnort, kein Lieferziel
 const DROP_SPOTS = [
-  { id: "drop_post", room: "post", zone: "village", floor: 0, x: 150, y: 170, label: "Postschalter" },
-  { id: "drop_shop", room: "shop", zone: "village", floor: 0, x: 810, y: 170, label: "Shop-Theke" },
-  { id: "drop_park", room: "park", zone: "village", floor: 0, x: 180, y: 450, label: "Parkbank" },
-  { id: "drop_village_center", room: "village_center", zone: "village", floor: 0, x: 480, y: 300, label: "Marktplatz" },
-  { id: "drop_cafe", room: "cafe", zone: "village", floor: 0, x: 740, y: 450, label: "Café-Tresen" },
+  { id: "drop_post", room: "post", zone: "village", floor: 0, x: 570, y: 570, label: "Postschalter" },
+  { id: "drop_shop", room: "shop", zone: "village", floor: 0, x: 1830, y: 570, label: "Shop-Theke" },
+  { id: "drop_park", room: "park", zone: "village", floor: 0, x: 600, y: 850, label: "Parkbank" },
+  { id: "drop_village_center", room: "village_center", zone: "village", floor: 0, x: 1200, y: 700, label: "Marktplatz" },
+  { id: "drop_cafe", room: "cafe", zone: "village", floor: 0, x: 1760, y: 850, label: "Café-Tresen" },
 ];
 const JOB_DELIVERY = { id: "delivery", name: "Postbote", reward: 40, minSeconds: 5 };
 // Bauprojekte: Café ausschließlich im Dorf (Zone village)
@@ -259,13 +259,14 @@ function saveWorldPos(socket) {
 
 const sessions = new Map(); // socket.id -> username
 const voiceRoomsUsers = new Map(); // roomId -> Set(socket.id)
+const WORLD_W = 2400, WORLD_H = 1800;
 const worldUsers = new Map(); // socket.id -> {username,x,y,room,zone,floor,seat,avatar,color,banned,tempBanned}
 const WORLD_ZONES = ["villa", "village"];
 const WORLD_FLOORS = { villa: [0, 1], village: [0] };
 const WORLD_ROOMS = [
   "lounge", "kitchen", "living_room", "living", "gaming", "chill",
-  "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway",
-  "village_center", "village_road", "cafe", "shop", "post", "park"
+  "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway", "hallway_up", "balcony", "entrance",
+  "village_center", "village_road", "cafe", "shop", "post", "park", "rathaus", "village_house_01", "village_house_02", "village_house_03", "village_house_04", "village_house_05", "village_house_06", "village_residential"
 ];
 let lastWorldBroadcast = 0;
 
@@ -1182,7 +1183,7 @@ io.on("connection", (socket) => {
       );
     }
     let avatar = null, color = null, banned = false;
-    let spawn = { x: 480, y: 500, zone: "villa", floor: 0, room: "lounge" };
+    let spawn = { x: 1200, y: 1600, zone: "villa", floor: 0, room: "lounge" };
     try {
       const doc = await User.findOne({ username }, "avatar color isBanned lastWorldPos").lean();
       if (doc) {
@@ -1191,13 +1192,20 @@ io.on("connection", (socket) => {
         banned = doc.isBanned === true;
         const p = doc.lastWorldPos;
         if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) {
+          // Migration: alte 960x600 Positionen → neue Welt skaliert + clamped
+          const isOld = p.x < 960 && p.y < 600 && !p.zone;
+          const nx = isOld ? p.x + 700 : p.x;
+          const ny = isOld ? p.y + 1100 : p.y;
           spawn = {
-            x: Math.max(20, Math.min(940, p.x)),
-            y: Math.max(20, Math.min(580, p.y)),
-            zone: (p.zone && WORLD_ZONES.includes(p.zone)) ? p.zone : "villa",
+            x: Math.max(20, Math.min(WORLD_W - 20, nx)),
+            y: Math.max(20, Math.min(WORLD_H - 20, ny)),
+            zone: (p.zone && WORLD_ZONES.includes(p.zone)) ? p.zone : (isOld ? "villa" : "villa"),
             floor: Number.isFinite(p.floor) ? p.floor : 0,
             room: p.room || "lounge",
           };
+          // Fallback wenn in Solid: sicheren Spawn nehmen
+          if (spawn.x < 100) spawn.x = 1200;
+          if (spawn.y < 100) spawn.y = 1600;
         }
       }
     } catch (err) {
@@ -1226,8 +1234,8 @@ io.on("connection", (socket) => {
     if (!u) return;
     const { x, y, room, zone, floor, seat } = data || {};
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    u.x = Math.max(0, Math.min(960, x));
-    u.y = Math.max(0, Math.min(600, y));
+    u.x = Math.max(0, Math.min(WORLD_W, x));
+    u.y = Math.max(0, Math.min(WORLD_H, y));
     if (WORLD_ROOMS.includes(room)) u.room = room;
     if (zone && WORLD_ZONES.includes(zone)) u.zone = zone;
     if (Number.isFinite(floor) && floor >= 0 && floor <= 2) u.floor = floor;

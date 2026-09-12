@@ -276,97 +276,98 @@ document.addEventListener("DOMContentLoaded", () => {
   // Maßstab: Player-Radius 16 (Durchmesser 32) als Referenz für alles.
   // ===== WORLD: Villa + Dorf, 2 Etagen, Zonen =====
   const WORLD = {
-    w: 960, h: 600,
-    // Villa Erdgeschoss — großes Haus, 10 Räume
+    w: 2400, h: 1800,
+    // Villa EG — offset 800,1200 (800x400)
     rooms: [
-      { id: "kitchen", name: "Küche", x: 36, y: 36, w: 220, h: 180, zone: "villa", floor: 0, floorColor: "rgba(170,200,215,.08)" },
-      { id: "dining", name: "Esszimmer", x: 256, y: 36, w: 68, h: 100, zone: "villa", floor: 0, floorColor: "rgba(200,180,140,.08)" },
-      { id: "living_room", name: "Wohnzimmer", x: 336, y: 36, w: 260, h: 180, zone: "villa", floor: 0, floorColor: "rgba(150,130,200,.08)" },
-      { id: "gaming", name: "Gaming", x: 636, y: 36, w: 288, h: 180, zone: "villa", floor: 0, floorColor: "rgba(121,220,232,.07)" },
-      { id: "toilet", name: "Toilette", x: 36, y: 216, w: 90, h: 84, zone: "villa", floor: 0, floorColor: "rgba(180,210,200,.09)" },
-      { id: "chill", name: "Chill-Ecke", x: 126, y: 216, w: 130, h: 84, zone: "villa", floor: 0, floorColor: "rgba(255,190,120,.09)" },
-      { id: "lounge", name: "Flur", x: 36, y: 300, w: 888, h: 80, zone: "villa", floor: 0, floorColor: "rgba(200,150,100,.05)" },
-      { id: "entrance", name: "Eingang", x: 36, y: 380, w: 180, h: 184, zone: "villa", floor: 0, floorColor: "rgba(200,170,120,.06)" },
-      { id: "office", name: "Arbeitszimmer", x: 216, y: 380, w: 160, h: 100, zone: "villa", floor: 0, floorColor: "rgba(140,170,180,.08)" },
-      { id: "storage", name: "Abstellraum", x: 376, y: 380, w: 100, h: 100, zone: "villa", floor: 0, floorColor: "rgba(180,180,160,.07)" },
-      // Obergeschoss
-      { id: "bedroom", name: "Schlafzimmer", x: 36, y: 36, w: 260, h: 180, zone: "villa", floor: 1, floorColor: "rgba(200,140,160,.08)" },
-      { id: "bedroom2", name: "Gästezimmer", x: 296, y: 36, w: 180, h: 140, zone: "villa", floor: 1, floorColor: "rgba(180,160,200,.08)" },
-      { id: "bathroom", name: "Badezimmer", x: 476, y: 36, w: 160, h: 140, zone: "villa", floor: 1, floorColor: "rgba(140,190,200,.09)" },
-      { id: "hallway_up", name: "Flur OG", x: 36, y: 216, w: 888, h: 80, zone: "villa", floor: 1, floorColor: "rgba(200,150,100,.05)" },
-      { id: "balcony", name: "Balkon", x: 636, y: 36, w: 288, h: 80, zone: "villa", floor: 1, floorColor: "rgba(160,200,180,.07)" },
-      // Dorf
-      { id: "village_center", name: "Marktplatz", x: 340, y: 220, w: 280, h: 160, zone: "village", floor: 0, floorColor: "rgba(100,150,100,.07)" },
-      { id: "village_road", name: "Dorfstraße", x: 36, y: 300, w: 888, h: 60, zone: "village", floor: 0, floorColor: "rgba(120,110,90,.06)" },
-      { id: "post", name: "Post", x: 80, y: 120, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(200,180,120,.08)" },
-      { id: "shop", name: "Shop", x: 740, y: 120, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(140,180,160,.08)" },
-      { id: "park", name: "Park", x: 80, y: 380, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(120,170,120,.08)" },
-      { id: "cafe", name: "Café", x: 640, y: 380, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(180,140,120,.08)" },
-      { id: "rathaus", name: "Rathaus", x: 340, y: 80, w: 280, h: 100, zone: "village", floor: 0, floorColor: "rgba(150,140,180,.08)" },
+      // Villa EG (y 1400-1800)
+      { id: "kitchen", name: "Küche", x: 836, y: 1436, w: 220, h: 180, zone: "villa", floor: 0, floorColor: "rgba(170,200,215,.08)" },
+      { id: "dining", name: "Esszimmer", x: 1056, y: 1436, w: 68, h: 100, zone: "villa", floor: 0, floorColor: "rgba(200,180,140,.08)" },
+      { id: "living_room", name: "Wohnzimmer", x: 1136, y: 1436, w: 260, h: 180, zone: "villa", floor: 0, floorColor: "rgba(150,130,200,.08)" },
+      { id: "gaming", name: "Gaming", x: 1436, y: 1436, w: 288, h: 180, zone: "villa", floor: 0, floorColor: "rgba(121,220,232,.07)" },
+      { id: "toilet", name: "Toilette", x: 836, y: 1616, w: 90, h: 84, zone: "villa", floor: 0, floorColor: "rgba(180,210,200,.09)" },
+      { id: "chill", name: "Chill-Ecke", x: 926, y: 1616, w: 130, h: 84, zone: "villa", floor: 0, floorColor: "rgba(255,190,120,.09)" },
+      { id: "lounge", name: "Flur", x: 836, y: 1700, w: 888, h: 80, zone: "villa", floor: 0, floorColor: "rgba(200,150,100,.05)" },
+      { id: "entrance", name: "Eingang", x: 836, y: 1780, w: 180, h: 100, zone: "villa", floor: 0, floorColor: "rgba(200,170,120,.06)" },
+      { id: "office", name: "Arbeitszimmer", x: 1016, y: 1780, w: 160, h: 100, zone: "villa", floor: 0, floorColor: "rgba(140,170,180,.08)" },
+      { id: "storage", name: "Abstellraum", x: 1176, y: 1780, w: 100, h: 100, zone: "villa", floor: 0, floorColor: "rgba(180,180,160,.07)" },
+      // OG (y 1200-1400)
+      { id: "bedroom", name: "Schlafzimmer", x: 836, y: 1236, w: 260, h: 180, zone: "villa", floor: 1, floorColor: "rgba(200,140,160,.08)" },
+      { id: "bedroom2", name: "Gästezimmer", x: 1096, y: 1236, w: 180, h: 140, zone: "villa", floor: 1, floorColor: "rgba(180,160,200,.08)" },
+      { id: "bathroom", name: "Badezimmer", x: 1276, y: 1236, w: 160, h: 140, zone: "villa", floor: 1, floorColor: "rgba(140,190,200,.09)" },
+      { id: "hallway_up", name: "Flur OG", x: 836, y: 1416, w: 888, h: 40, zone: "villa", floor: 1, floorColor: "rgba(200,150,100,.05)" },
+      { id: "balcony", name: "Balkon", x: 1436, y: 1236, w: 288, h: 80, zone: "villa", floor: 1, floorColor: "rgba(160,200,180,.07)" },
+      // Dorf (y 200-1000, x 400-2000)
+      { id: "village_center", name: "Marktplatz", x: 1060, y: 620, w: 280, h: 160, zone: "village", floor: 0, floorColor: "rgba(100,150,100,.07)" },
+      { id: "village_road", name: "Dorfstraße", x: 400, y: 700, w: 1600, h: 60, zone: "village", floor: 0, floorColor: "rgba(120,110,90,.06)" },
+      { id: "post", name: "Post", x: 500, y: 520, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(200,180,120,.08)" },
+      { id: "shop", name: "Shop", x: 1760, y: 520, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(140,180,160,.08)" },
+      { id: "park", name: "Park", x: 500, y: 780, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(120,170,120,.08)" },
+      { id: "cafe", name: "Café", x: 1660, y: 780, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(180,140,120,.08)" },
+      { id: "rathaus", name: "Rathaus", x: 1060, y: 380, w: 280, h: 100, zone: "village", floor: 0, floorColor: "rgba(150,140,180,.08)" },
+      { id: "village_house_01", name: "Haus 1", x: 600, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
+      { id: "village_house_02", name: "Haus 2", x: 1800, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
+      { id: "village_house_03", name: "Haus 3", x: 600, y: 1000, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
+      { id: "village_residential", name: "Wohnviertel", x: 400, y: 900, w: 1600, h: 200, zone: "village", floor: 0, floorColor: "rgba(160,140,120,.04)" },
     ],
     walls: [
-      // Außen Villa EG
-      { x: 24, y: 24, w: 912, h: 12, zone: "villa", floor: 0 },
-      { x: 24, y: 564, w: 912, h: 12, zone: "villa", floor: 0 },
-      { x: 24, y: 24, w: 12, h: 552, zone: "villa", floor: 0 },
-      { x: 924, y: 24, w: 12, h: 552, zone: "villa", floor: 0 },
-      // Innen EG
-      { x: 36, y: 300, w: 110, h: 12, zone: "villa", floor: 0 },
-      { x: 200, y: 300, w: 253, h: 12, zone: "villa", floor: 0 },
-      { x: 507, y: 300, w: 253, h: 12, zone: "villa", floor: 0 },
-      { x: 814, y: 300, w: 110, h: 12, zone: "villa", floor: 0 },
-      { x: 324, y: 36, w: 12, h: 180, zone: "villa", floor: 0 },
-      { x: 256, y: 36, w: 12, h: 100, zone: "villa", floor: 0 },
-      { x: 624, y: 36, w: 12, h: 180, zone: "villa", floor: 0 },
-      { x: 36, y: 216, w: 288, h: 12, zone: "villa", floor: 0 },
-      { x: 126, y: 216, w: 12, h: 84, zone: "villa", floor: 0 },
-      { x: 216, y: 380, w: 12, h: 100, zone: "villa", floor: 0 },
-      { x: 376, y: 380, w: 12, h: 100, zone: "villa", floor: 0 },
-      // OG
-      { x: 24, y: 24, w: 912, h: 12, zone: "villa", floor: 1 },
-      { x: 24, y: 564, w: 912, h: 12, zone: "villa", floor: 1 },
-      { x: 24, y: 24, w: 12, h: 552, zone: "villa", floor: 1 },
-      { x: 924, y: 24, w: 12, h: 552, zone: "villa", floor: 1 },
-      { x: 36, y: 300, w: 888, h: 12, zone: "villa", floor: 1 },
-      { x: 296, y: 36, w: 12, h: 180, zone: "villa", floor: 1 },
-      { x: 476, y: 36, w: 12, h: 180, zone: "villa", floor: 1 },
-      { x: 636, y: 36, w: 12, h: 80, zone: "villa", floor: 1 },
-      // Dorf Außen + Straßenrahmen
-      { x: 24, y: 24, w: 912, h: 12, zone: "village", floor: 0 },
-      { x: 24, y: 564, w: 912, h: 12, zone: "village", floor: 0 },
-      { x: 24, y: 24, w: 12, h: 552, zone: "village", floor: 0 },
-      { x: 924, y: 24, w: 12, h: 552, zone: "village", floor: 0 },
+      // Villa EG Außen
+      { x: 800, y: 1400, w: 800, h: 12, zone: "villa", floor: 0 },
+      { x: 800, y: 1880, w: 800, h: 12, zone: "villa", floor: 0 },
+      { x: 800, y: 1400, w: 12, h: 492, zone: "villa", floor: 0 },
+      { x: 1600, y: 1400, w: 12, h: 492, zone: "villa", floor: 0 },
+      // Villa EG Innen
+      { x: 836, y: 1700, w: 110, h: 12, zone: "villa", floor: 0 },
+      { x: 1000, y: 1700, w: 253, h: 12, zone: "villa", floor: 0 },
+      { x: 1307, y: 1700, w: 253, h: 12, zone: "villa", floor: 0 },
+      { x: 1614, y: 1700, w: 110, h: 12, zone: "villa", floor: 0 },
+      { x: 1124, y: 1400, w: 12, h: 180, zone: "villa", floor: 0 },
+      { x: 1056, y: 1400, w: 12, h: 100, zone: "villa", floor: 0 },
+      { x: 1424, y: 1400, w: 12, h: 180, zone: "villa", floor: 0 },
+      { x: 836, y: 1616, w: 220, h: 12, zone: "villa", floor: 0 },
+      { x: 926, y: 1616, w: 12, h: 84, zone: "villa", floor: 0 },
+      { x: 1016, y: 1780, w: 12, h: 100, zone: "villa", floor: 0 },
+      { x: 1176, y: 1780, w: 12, h: 100, zone: "villa", floor: 0 },
+      // Villa OG
+      { x: 800, y: 1200, w: 800, h: 12, zone: "villa", floor: 1 },
+      { x: 800, y: 1800, w: 800, h: 12, zone: "villa", floor: 1 },
+      { x: 800, y: 1200, w: 12, h: 600, zone: "villa", floor: 1 },
+      { x: 1600, y: 1200, w: 12, h: 600, zone: "villa", floor: 1 },
+      { x: 836, y: 1456, w: 888, h: 12, zone: "villa", floor: 1 },
+      { x: 1096, y: 1200, w: 12, h: 180, zone: "villa", floor: 1 },
+      { x: 1276, y: 1200, w: 12, h: 180, zone: "villa", floor: 1 },
+      // Dorf Außen
+      { x: 380, y: 180, w: 1640, h: 12, zone: "village", floor: 0 },
+      { x: 380, y: 1100, w: 1640, h: 12, zone: "village", floor: 0 },
+      { x: 380, y: 180, w: 12, h: 932, zone: "village", floor: 0 },
+      { x: 2020, y: 180, w: 12, h: 932, zone: "village", floor: 0 },
     ],
     doors: [
-      { x: 146, y: 296, w: 54, h: 20, from: "kitchen", to: "lounge", zone: "villa", floor: 0 },
-      { x: 453, y: 296, w: 54, h: 20, from: "living_room", to: "lounge", zone: "villa", floor: 0 },
-      { x: 760, y: 296, w: 54, h: 20, from: "gaming", to: "lounge", zone: "villa", floor: 0 },
-      { x: 120, y: 210, w: 20, h: 54, from: "toilet", to: "chill", zone: "villa", floor: 0 },
-      { x: 300, y: 376, w: 50, h: 20, from: "office", to: "entrance", zone: "villa", floor: 0 },
-      // Treppe
-      { x: 480, y: 360, w: 60, h: 20, from: "lounge", to: "hallway_up", zone: "villa", floor: 0 },
-      // Haustür
-      { x: 120, y: 552, w: 50, h: 20, from: "entrance", to: "village_center", zone: "villa", floor: 0 },
+      { x: 946, y: 1696, w: 54, h: 20, from: "kitchen", to: "lounge", zone: "villa", floor: 0 },
+      { x: 1253, y: 1696, w: 54, h: 20, from: "living_room", to: "lounge", zone: "villa", floor: 0 },
+      { x: 1560, y: 1696, w: 54, h: 20, from: "gaming", to: "lounge", zone: "villa", floor: 0 },
+      { x: 920, y: 1610, w: 20, h: 54, from: "toilet", to: "chill", zone: "villa", floor: 0 },
+      { x: 1100, y: 1776, w: 50, h: 20, from: "office", to: "entrance", zone: "villa", floor: 0 },
+      { x: 1280, y: 1456, w: 60, h: 20, from: "lounge", to: "hallway_up", zone: "villa", floor: 0 },
+      { x: 920, y: 1860, w: 50, h: 20, from: "entrance", to: "village_center", zone: "villa", floor: 0 },
     ],
     seats: [
-      { id: "k1", x: 140, y: 244, room: "kitchen", zone: "villa", floor: 0 },
-      { id: "k2", x: 240, y: 244, room: "kitchen", zone: "villa", floor: 0 },
-      { id: "s1", x: 440, y: 120, room: "living_room", zone: "villa", floor: 0 },
-      { id: "s2", x: 520, y: 120, room: "living_room", zone: "villa", floor: 0 },
-      { id: "g1", x: 695, y: 172, room: "gaming", zone: "villa", floor: 0 },
-      { id: "g2", x: 780, y: 172, room: "gaming", zone: "villa", floor: 0 },
-      { id: "g3", x: 865, y: 172, room: "gaming", zone: "villa", floor: 0 },
-      { id: "c1", x: 180, y: 250, room: "chill", zone: "villa", floor: 0 },
-      { id: "b1", x: 150, y: 100, room: "bedroom", zone: "villa", floor: 1 },
-      { id: "b2", x: 350, y: 100, room: "bedroom2", zone: "villa", floor: 1 },
-      { id: "v1", x: 480, y: 300, room: "village_center", zone: "village", floor: 0 },
-      { id: "p1", x: 150, y: 450, room: "park", zone: "village", floor: 0 },
+      { id: "k1", x: 940, y: 1540, room: "kitchen", zone: "villa", floor: 0 },
+      { id: "k2", x: 1040, y: 1540, room: "kitchen", zone: "villa", floor: 0 },
+      { id: "s1", x: 1240, y: 1520, room: "living_room", zone: "villa", floor: 0 },
+      { id: "s2", x: 1320, y: 1520, room: "living_room", zone: "villa", floor: 0 },
+      { id: "g1", x: 1495, y: 1572, room: "gaming", zone: "villa", floor: 0 },
+      { id: "g2", x: 1580, y: 1572, room: "gaming", zone: "villa", floor: 0 },
+      { id: "g3", x: 1665, y: 1572, room: "gaming", zone: "villa", floor: 0 },
+      { id: "c1", x: 980, y: 1650, room: "chill", zone: "villa", floor: 0 },
+      { id: "b1", x: 950, y: 1300, room: "bedroom", zone: "villa", floor: 1 },
+      { id: "b2", x: 1150, y: 1300, room: "bedroom2", zone: "villa", floor: 1 },
+      { id: "v1", x: 1200, y: 700, room: "village_center", zone: "village", floor: 0 },
+      { id: "p1", x: 600, y: 850, room: "park", zone: "village", floor: 0 },
     ],
-    spawn: { x: 480, y: 500, zone: "villa", floor: 0, room: "lounge" },
-    // Villa-Haupteingang und Dorf-Eingang
-    villaExit: { x: 120, y: 560, w: 50, h: 20, fromZone: "villa", toZone: "village", toPos: { x: 480, y: 500, zone: "village", floor: 0 } },
-    villageEntry: { x: 480, y: 500, w: 50, h: 20, fromZone: "village", toZone: "villa", toPos: { x: 120, y: 540, zone: "villa", floor: 0 } },
-    exit: { x: 455, y: 516, w: 50, h: 32 },
+    spawn: { x: 1200, y: 1820, zone: "villa", floor: 0, room: "entrance" },
+    villaExit: { x: 920, y: 1880, w: 50, h: 20, fromZone: "villa", toZone: "village", toPos: { x: 1200, y: 1100, zone: "village", floor: 0 } },
+    villageEntry: { x: 1200, y: 1100, w: 50, h: 20, fromZone: "village", toZone: "villa", toPos: { x: 920, y: 1860, zone: "villa", floor: 0 } },
+    exit: { x: 920, y: 1880, w: 50, h: 20 },
   };
   const ROOM_NAMES = { lounge: "Flur", kitchen: "Küche", living: "Wohnzimmer", living_room: "Wohnzimmer", gaming: "Gaming-Zimmer", chill: "Chill-Ecke", toilet: "Toilette", bedroom: "Schlafzimmer", bedroom2: "Gästezimmer", bathroom: "Badezimmer", office: "Arbeitszimmer", dining: "Esszimmer", storage: "Abstellraum", hallway: "Flur", hallway_up: "Flur OG", balcony: "Balkon", village_center: "Marktplatz", village_road: "Dorfstraße", cafe: "Café", shop: "Shop", post: "Post", park: "Park", rathaus: "Rathaus" };
   const PLAYER_R = 14;
@@ -413,37 +414,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const dyn = worldDynamicSolids.filter((s) => !s.zone || (s.zone === zone && s.floor === floor));
     return base.concat(furn).concat(dyn);
   }
-  // Echte Raum-Geometrie — Zone+Floor beachten. Villa OG hat eigene Räume, Dorf eigene.
+  // Echte Raum-Geometrie — dynamisch aus WORLD.rooms, Zone/Floor beachten
   function worldRoomAt(x, y, zone, floor) {
     zone = zone || worldPlayer.zone || "villa";
     floor = floor !== undefined ? floor : (worldPlayer.floor || 0);
-    if (zone === "village") {
-      if (x >= 640 && x <= 840 && y >= 380 && y <= 520) return "cafe";
-      if (x >= 740 && x <= 880 && y >= 120 && y <= 220) return "shop";
-      if (x >= 80 && x <= 220 && y >= 120 && y <= 220) return "post";
-      if (x >= 80 && x <= 280 && y >= 380 && y <= 520) return "park";
-      if (x >= 340 && x <= 620 && y >= 80 && y <= 180) return "rathaus";
-      if (x >= 340 && x <= 620 && y >= 220 && y <= 380) return "village_center";
-      return "village_road";
+    for (const r of WORLD.rooms) {
+      if (r.zone !== zone || r.floor !== floor) continue;
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return r.id;
     }
-    if (zone === "villa" && floor === 1) {
-      if (x >= 36 && x <= 296 && y >= 36 && y <= 216) return "bedroom";
-      if (x >= 296 && x <= 476 && y >= 36 && y <= 216) return "bedroom2";
-      if (x >= 476 && x <= 636 && y >= 36 && y <= 216) return "bathroom";
-      if (x >= 636 && x <= 924 && y >= 36 && y <= 120) return "balcony";
-      return "hallway_up";
-    }
-    // Villa EG
-    if (x >= 36 && x <= 256 && y >= 36 && y <= 216) return "kitchen";
-    if (x >= 256 && x <= 324 && y >= 36 && y <= 136) return "dining";
-    if (x >= 336 && x <= 596 && y >= 36 && y <= 216) return "living_room";
-    if (x >= 636 && x <= 924 && y >= 36 && y <= 216) return "gaming";
-    if (x >= 36 && x <= 126 && y >= 216 && y <= 300) return "toilet";
-    if (x >= 126 && x <= 324 && y >= 216 && y <= 300) return "chill";
-    if (x >= 216 && x <= 376 && y >= 380 && y <= 480) return "office";
-    if (x >= 376 && x <= 476 && y >= 380 && y <= 480) return "storage";
-    if (x >= 36 && x <= 216 && y >= 380 && y <= 564) return "entrance";
-    return "lounge";
+    return zone === "village" ? "village_road" : (floor === 1 ? "hallway_up" : "lounge");
   }
   // Kreis-gegen-AABB. Zone/Floor filtern — nur aktuelle Zone blockiert.
   function worldHitsSolid(x, y, zone, floor) {
@@ -605,15 +584,15 @@ document.addEventListener("DOMContentLoaded", () => {
     { id: "comp_g1", type: "hub", x: 695, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
     { id: "comp_g2", type: "hub", x: 780, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
     { id: "comp_g3", type: "hub", x: 865, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
-    // Dorf — Jobs & Shops nur hier (Villa ist Wohnort, kein Jobcenter)
-    { id: "post_terminal", type: "job", x: 150, y: 170, range: 55, room: "post", zone: "village", floor: 0 },
-    { id: "shop_market", type: "shop", shopId: "market", x: 810, y: 170, range: 60, room: "shop", zone: "village", floor: 0 },
-    { id: "city_board", type: "city", x: 480, y: 140, range: 60, room: "rathaus", zone: "village", floor: 0 },
-    { id: "cafe_counter", type: "shop", shopId: "cafe", x: 740, y: 450, range: 55, room: "cafe", zone: "village", floor: 0, enabled: false },
-    { id: "drop_village_center", type: "dropoff", spotId: "drop_village_center", x: 480, y: 300, range: 55, room: "village_center", zone: "village", floor: 0 },
-    { id: "drop_shop", type: "dropoff", spotId: "drop_shop", x: 810, y: 170, range: 55, room: "shop", zone: "village", floor: 0 },
-    { id: "drop_post", type: "dropoff", spotId: "drop_post", x: 150, y: 170, range: 55, room: "post", zone: "village", floor: 0 },
-    { id: "drop_park", type: "dropoff", spotId: "drop_park", x: 180, y: 450, range: 55, room: "park", zone: "village", floor: 0 },
+    // Dorf — Jobs & Shops nur hier
+    { id: "post_terminal", type: "job", x: 570, y: 570, range: 55, room: "post", zone: "village", floor: 0 },
+    { id: "shop_market", type: "shop", shopId: "market", x: 1830, y: 570, range: 60, room: "shop", zone: "village", floor: 0 },
+    { id: "city_board", type: "city", x: 1200, y: 430, range: 60, room: "rathaus", zone: "village", floor: 0 },
+    { id: "cafe_counter", type: "shop", shopId: "cafe", x: 1760, y: 850, range: 55, room: "cafe", zone: "village", floor: 0, enabled: false },
+    { id: "drop_village_center", type: "dropoff", spotId: "drop_village_center", x: 1200, y: 700, range: 55, room: "village_center", zone: "village", floor: 0 },
+    { id: "drop_shop", type: "dropoff", spotId: "drop_shop", x: 1830, y: 570, range: 55, room: "shop", zone: "village", floor: 0 },
+    { id: "drop_post", type: "dropoff", spotId: "drop_post", x: 570, y: 570, range: 55, room: "post", zone: "village", floor: 0 },
+    { id: "drop_park", type: "dropoff", spotId: "drop_park", x: 600, y: 850, range: 55, room: "park", zone: "village", floor: 0 },
   ];
   for (const s of WORLD.seats) {
     INTERACTABLES.push({ id: "chair_" + s.id, type: "sit", seatId: s.id, x: s.x, y: s.y, range: 40, room: s.room, zone: s.zone, floor: s.floor });
