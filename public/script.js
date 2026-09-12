@@ -366,13 +366,17 @@ document.addEventListener("DOMContentLoaded", () => {
       { x: 2020, y: 180, w: 12, h: 932, zone: "village", floor: 0 },
     ],
     doors: [
-      { x: 946, y: 1696, w: 54, h: 20, from: "kitchen", to: "lounge", zone: "villa", floor: 0 },
-      { x: 1253, y: 1696, w: 54, h: 20, from: "living_room", to: "lounge", zone: "villa", floor: 0 },
-      { x: 1560, y: 1696, w: 54, h: 20, from: "gaming", to: "lounge", zone: "villa", floor: 0 },
-      { x: 920, y: 1610, w: 20, h: 54, from: "toilet", to: "chill", zone: "villa", floor: 0 },
-      { x: 1100, y: 1776, w: 50, h: 20, from: "office", to: "entrance", zone: "villa", floor: 0 },
-      { x: 1280, y: 1456, w: 60, h: 20, from: "lounge", to: "hallway_up", zone: "villa", floor: 0 },
-      { x: 920, y: 1860, w: 50, h: 20, from: "entrance", to: "village_center", zone: "villa", floor: 0 },
+      { id: "door_kitchen_lounge", x: 946, y: 1696, w: 54, h: 20, from: "kitchen", to: "lounge", zone: "villa", floor: 0, state: "open" },
+      { id: "door_living_lounge", x: 1253, y: 1696, w: 54, h: 20, from: "living_room", to: "lounge", zone: "villa", floor: 0, state: "open" },
+      { id: "door_gaming_lounge", x: 1560, y: 1696, w: 54, h: 20, from: "gaming", to: "lounge", zone: "villa", floor: 0, state: "open" },
+      { id: "door_toilet_chill", x: 920, y: 1610, w: 20, h: 54, from: "toilet", to: "chill", zone: "villa", floor: 0, state: "open" },
+      { id: "door_office_entrance", x: 1100, y: 1776, w: 50, h: 20, from: "office", to: "entrance", zone: "villa", floor: 0, state: "open" },
+      { id: "door_stairs", x: 1280, y: 1456, w: 60, h: 20, from: "lounge", to: "hallway_up", zone: "villa", floor: 0, state: "open" },
+      { id: "door_villa_exit", x: 920, y: 1860, w: 50, h: 20, from: "entrance", to: "village_center", zone: "villa", floor: 0, state: "open" },
+      { id: "house_01_front", x: 640, y: 980, w: 40, h: 12, from: "house_01_entry", to: "village_road", zone: "village", floor: 0, state: "closed" },
+      { id: "house_02_front", x: 1840, y: 980, w: 40, h: 12, from: "house_02_entry", to: "village_road", zone: "village", floor: 0, state: "closed" },
+      { id: "house_01_living_kitchen", x: 660, y: 920, w: 12, h: 40, from: "house_01_living", to: "house_01_kitchen", zone: "village", floor: 0, state: "open" },
+      { id: "house_02_living_kitchen", x: 1860, y: 920, w: 12, h: 40, from: "house_02_living", to: "house_02_kitchen", zone: "village", floor: 0, state: "open" },
     ],
     seats: [
       { id: "k1", x: 940, y: 1540, room: "kitchen", zone: "villa", floor: 0 },
@@ -448,7 +452,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return zone === "village" ? "village_road" : (floor === 1 ? "hallway_up" : "lounge");
   }
-  // Kreis-gegen-AABB. Zone/Floor filtern — nur aktuelle Zone blockiert.
+  // Kreis-gegen-AABB. Zone/Floor filtern — nur aktuelle Zone blockiert. Türen geschlossen = solid.
   function worldHitsSolid(x, y, zone, floor) {
     zone = zone || worldPlayer.zone || "villa";
     floor = floor !== undefined ? floor : (worldPlayer.floor || 0);
@@ -459,6 +463,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const cy = Math.max(s.y, Math.min(y, s.y + s.h));
       const dx = x - cx, dy = y - cy;
       if (dx * dx + dy * dy < r * r) return true;
+    }
+    // Türen: closed = solid (inkl. opening/closing als solid)
+    for (const d of WORLD.doors) {
+      if (d.zone !== zone || d.floor !== floor) continue;
+      const st = doorStates.get(d.id) || d.state || "open";
+      if (st === "closed" || st === "opening" || st === "closing") {
+        const cx = Math.max(d.x, Math.min(x, d.x + d.w));
+        const cy = Math.max(d.y, Math.min(y, d.y + d.h));
+        const dx = x - cx, dy = y - cy;
+        if (dx * dx + dy * dy < r * r) return true;
+      }
     }
     return false;
   }
