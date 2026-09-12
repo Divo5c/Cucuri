@@ -6,11 +6,11 @@ const crypto = require("crypto");
 const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 
-const PUBLIC_WORLD_ENABLED = false; // Release-Freeze: nur Admin Divo sieht die Welt
+const PUBLIC_WORLD_ENABLED = false; // Production: nur Admin Divo sieht die Welt
 function isAdminUser(username) { return username === "Divo"; }
 function isWorldAllowed(username) {
-  // Für E2E-Tests: Tmp-User dürfen Welt betreten, echte Public-User nicht
-  if (username && username.startsWith("Tmp")) return true;
+  // Test-Bypass strikt hinter Env abgesichert, Standard false, Production niemals aktiv
+  if (process.env.ALLOW_TEST_BYPASS === "true" && username && username.startsWith("Tmp")) return true;
   return PUBLIC_WORLD_ENABLED || isAdminUser(username);
 }
 
@@ -1365,4 +1365,4 @@ io.on("connection", (socket) => {
 // ===== Serverstart =====
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`));
+server.listen(PORT, "0.0.0.0", () => console.log(`Server läuft auf Port ${PORT}`));

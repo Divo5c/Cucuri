@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: cucuri
+    env: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.1
+      - key: PORT
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: PUBLIC_WORLD_ENABLED
+        value: "false"
+        sync: false
+      # Optional: STUN/TURN für Voice hinter restriktiven NATs
+      # - key: STUN_URL
+      #   value: stun:stun.l.google.com:19302
+      # - key: TURN_URL
+      #   sync: false
+      # - key: TURN_USER
+      #   sync: false
+      # - key: TURN_PASS
+      #   sync: false
+    healthCheckPath: /
