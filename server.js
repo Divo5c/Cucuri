@@ -6,6 +6,14 @@ const crypto = require("crypto");
 const socketIo = require("socket.io");
 const mongoose = require("mongoose");
 
+const PUBLIC_WORLD_ENABLED = false; // Release-Freeze: nur Admin Divo sieht die Welt
+function isAdminUser(username) { return username === "Divo"; }
+function isWorldAllowed(username) {
+  // Für E2E-Tests: Tmp-User dürfen Welt betreten, echte Public-User nicht
+  if (username && username.startsWith("Tmp")) return true;
+  return PUBLIC_WORLD_ENABLED || isAdminUser(username);
+}
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -1224,6 +1232,9 @@ io.on("connection", (socket) => {
   socket.on("worldJoin", async () => {
     const username = sessions.get(socket.id);
     if (!username) return;
+    if (!isWorldAllowed(username)) {
+      return socket.emit("worldError", "Welt ist noch nicht freigeschaltet — Coming Soon! Voice Chat ist verfügbar.");
+    }
     // Server-autoritativ: nur mit aktivem Voice-Kontext gibt es World-Präsenz.
     if (!socket.data.voiceRoomId) {
       return socket.emit(
@@ -1282,6 +1293,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("worldMove", (data) => {
+    const username = sessions.get(socket.id);
+    if (username && !isWorldAllowed(username)) return;
     const u = worldUsers.get(socket.id);
     if (!u) return;
     const { x, y, room, zone, floor, seat } = data || {};
@@ -1300,6 +1313,7 @@ io.on("connection", (socket) => {
   socket.on("doorUpdate", ({ doorId, state }) => {
     const username = sessions.get(socket.id);
     if (!username) return;
+    if (!isWorldAllowed(username)) return;
     if (!doorStates.has(doorId)) return;
     if (!["open", "closed"].includes(state)) return;
     const u = worldUsers.get(socket.id);

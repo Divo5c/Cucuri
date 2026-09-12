@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Identität DIESES Tabs (localStorage teilen sich alle Tabs -> pro Tab merken)
   let sessionUsername = null;
   const activeUser = () => sessionUsername || currentUser();
+  const PUBLIC_WORLD_ENABLED = false;
+  const isWorldAllowed = () => PUBLIC_WORLD_ENABLED || activeUser() === "Divo";
 
   // ===== Profil-Konstanten (Spiegel der Server-Whitelists) =====
   const PROFILE_AVATARS = ["😀", "😎", "🤖", "👾", "🐱", "🦊", "🐼", "🚀", "⭐", "🎮", "🎧", "💜"];
@@ -261,10 +263,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const VIEW_IDS = { chat: "Chat", world: "World" };
   function setView(view) {
     if (!VIEW_IDS[view]) view = "chat";
+    // Public: Welt gesperrt → Coming Soon
+    if (view === "world" && !isWorldAllowed()) {
+      $("worldView")?.classList.add("hidden");
+      $("comingSoon")?.classList.remove("hidden");
+      $("chatContainer")?.classList.remove("view-voice");
+      worldStop();
+      ["chat", "world"].forEach((v) => $("viewBtn" + VIEW_IDS[v])?.classList.toggle("active", v === "world"));
+      return;
+    }
+    $("comingSoon")?.classList.add("hidden");
     ["chat", "world"].forEach((v) => $("viewBtn" + VIEW_IDS[v])?.classList.toggle("active", v === view));
     $("messages")?.classList.toggle("hidden", view !== "chat");
     $("worldView")?.classList.toggle("hidden", view !== "world");
-    // Chat-Fenster: Chat + alte Lobby. Welt-Fenster: Welt + Voice.
     $("chatContainer")?.classList.toggle("view-voice", view !== "chat");
     if (view === "world") worldStart(); else worldStop();
   }
@@ -1485,6 +1496,11 @@ document.addEventListener("DOMContentLoaded", () => {
     worldRAF = requestAnimationFrame(worldLoop);
   }
   function worldStart() {
+    if (!isWorldAllowed()) {
+      $("comingSoon")?.classList.remove("hidden");
+      $("worldView")?.classList.add("hidden");
+      return;
+    }
     if (worldActive) return;
     if (!activeUser()) { setView("chat"); return; }
     worldActive = true;

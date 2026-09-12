@@ -815,6 +815,21 @@ button { font-family: var(--font-body); }
   .voice-mobile-toggle { display: block; }
 }
 
+/* Coming Soon — hochwertig, dunkel, Cucuri Branding */
+.coming-soon { position: relative; flex: 1; min-height: 400px; display: flex; align-items: center; justify-content: center; background: radial-gradient(1200px 600px at 50% 0%, rgba(121,220,232,.12), transparent 60%), linear-gradient(#04101f, #071a33 60%, #04101f); overflow: hidden; }
+.coming-soon.hidden { display: none !important; }
+.coming-soon-content { text-align: center; padding: 40px 30px; max-width: 520px; }
+.coming-soon-content h1 { font-family: var(--font-logo, 'Poppins', sans-serif); font-size: 2.8rem; letter-spacing: .12em; color: #fff; margin: 0; }
+.coming-soon-content h2 { font-family: var(--font-body); font-size: 1.1rem; letter-spacing: .35em; color: var(--cyan, #79dce8); margin: 8px 0 18px; font-weight: 600; }
+.coming-soon-title { font-family: var(--font-serif, serif); font-size: 2.2rem; letter-spacing: .18em; color: #fff; margin: 0 0 16px; }
+.coming-soon-text { color: var(--muted, rgba(255,255,255,.7)); font-size: .95rem; line-height: 1.6; margin: 0 0 24px; }
+.coming-soon-btn { background: linear-gradient(180deg,#fff 0%,#d8ecfe 9%,#dceefe 72%,#f4f9ff 100%); color: #071227; border: 0; border-radius: 999px; padding: 12px 28px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 18px -8px rgba(255,255,255,.5), inset 0 0 0 2px rgba(255,255,255,.9); }
+.coming-soon-btn:hover { transform: translateY(-1px); filter: brightness(1.03); }
+@media (max-width: 640px) {
+  .coming-soon-content h1 { font-size: 1.9rem; }
+  .coming-soon-title { font-size: 1.5rem; }
+  .coming-soon-content { padding: 24px 20px; }
+}
 /* Chat-Fenster: Chat + alte Lobby (Voice versteckt). Welt-Fenster: Welt + Voice (ohne Sidebar). */
 #chatContainer:not(.view-voice) > .voice-panel { display: none; }
 #chatContainer.view-voice > .sidebar { display: none; }

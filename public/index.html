@@ -112,6 +112,17 @@
           <p class="world-hint">WASD / Pfeile = laufen • E = interagieren • Gleiches Zimmer = reden • Ausgangstür = Voice</p>
         </div>
 
+        <!-- Coming Soon für Public User (World noch nicht freigeschaltet) -->
+        <div id="comingSoon" class="coming-soon hidden">
+          <div class="coming-soon-content">
+            <h1>CUCURI</h1>
+            <h2>🌍 WORLD</h2>
+            <p class="coming-soon-title">COMING SOON</p>
+            <p class="coming-soon-text">Wir arbeiten gerade an der Welt.<br>Voice Chat ist bereits verfügbar.<br>Die Welt folgt in einem späteren Update.</p>
+            <button class="coming-soon-btn" onclick="document.getElementById('comingSoon').classList.add('hidden'); document.getElementById('viewBtnChat')?.click();">Zum Voice Chat</button>
+          </div>
+        </div>
+
     <!-- Geldbörse -->
     <div id="walletModal" class="modal">
       <div class="modal-content game-modal">
