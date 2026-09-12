@@ -304,6 +304,7 @@ button { font-family: var(--font-body); }
   flex-direction: column;
   height: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 /* Lobby-Sidebar */
@@ -347,6 +348,7 @@ button { font-family: var(--font-body); }
 /* ===== Nachrichten-Bereich ===== */
 #messages {
   flex: 1;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
   position: relative;
@@ -714,35 +716,50 @@ button { font-family: var(--font-body); }
 .voice-participants-list li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); font-size: 0.8rem; }
 .voice-sidebar.collapsed { width: 40px; min-width: 40px; }
 
-/* Mobiler Voice-Toggle + mobiles Panel */
-.voice-mobile-toggle {
+/* Voice-Menü rechts in der Mitte (Spiegel zum Games-Menü links) */
+.voice-menu {
+  position: fixed;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
   display: none;
-  position: fixed;
-  right: 12px; bottom: 16px;
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  border: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  z-index: 910;
-  background: linear-gradient(180deg, #ffffff 0%, #d6e8f8 30%, #dceefe 75%, #ffffff 100%);
-  color: var(--btn-ink);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 0 18px rgba(121, 220, 232, 0.35);
+  align-items: center;
+  z-index: 500;
+  transition: transform 0.3s ease-in-out;
 }
-.voice-panel-mobile {
-  position: fixed;
-  left: 0; right: 0;
-  bottom: -260px;
-  height: 260px;
-  background: rgba(4, 16, 31, 0.95);
-  border-top: 1px solid var(--card-border);
-  z-index: 905;
-  transition: bottom 0.25s ease-out;
+.voice-menu.closed { transform: translate(100%, -50%); }
+.voice-panel-side {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-right: none;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding: 15px;
+  border-radius: 16px 0 0 16px;
   display: flex;
   flex-direction: column;
-  padding: 10px 12px;
+  gap: 10px;
+  box-shadow: var(--shadow-lg);
+  width: 300px;
+  max-width: 85vw;
+  max-height: 70dvh;
+  overflow: auto;
 }
-.voice-panel-mobile.open { bottom: 0; }
+.voice-panel-side .voice-panel { display: block; width: auto; min-width: 0; border: 0; border-radius: 0; background: transparent; padding: 0; }
+.voice-toggle-btn {
+  background: linear-gradient(180deg, #ffffff 0%, #d8ecfe 20%, #dceefe 80%, #ffffff 100%);
+  border: 1px solid rgba(255,255,255,0.9);
+  border-right: none;
+  color: var(--btn-ink);
+  padding: 15px 10px;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 10px 0 0 10px;
+  position: absolute;
+  left: -45px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+}
+.voice-toggle-btn:hover { filter: brightness(1.08); }
+.voice-mobile-toggle { display: none; }
 .voice-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .voice-panel-header h3 { color: #fff; font-size: 0.9rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .voice-panel-buttons { display: flex; gap: 6px; }
@@ -764,11 +781,9 @@ button { font-family: var(--font-body); }
 @media (max-width: 900px) {
   #chatContainer { width: calc(100% - 32px); }
   .voice-panel { display: none; }
-  .voice-mobile-toggle { display: block; }
-  .voice-panel-mobile { display: block; left: auto; right: 10px; bottom: 70px; width: min(340px, calc(100vw - 20px)); height: auto; max-height: 70dvh; overflow: auto; border: 1px solid rgba(121, 220, 232, 0.3); border-radius: 16px; transform: translateX(calc(100% + 24px)); transition: transform 0.25s ease; padding: 0; background: #0a1930; }
-  .voice-panel-mobile.open { transform: translateX(0); bottom: 70px; }
-  .voice-panel-mobile .voice-panel { display: block; width: auto; min-width: 0; border: 0; border-radius: 16px; }
-  .voice-panel-mobile:not(.open) { pointer-events: none; }
+  /* Voice-Seitenmenü nur auf Mobile/Tablet einblenden */
+  .voice-menu { display: flex; }
+  .voice-panel-side .voice-panel { display: block; }
 }
 
 @media screen and (max-width: 768px) {
@@ -777,6 +792,10 @@ button { font-family: var(--font-body); }
   .chat-header { height: 60px; padding: 0 12px; }
   .chat-header::after { left: 12px; right: 12px; }
   .chat-title { font-size: 1rem; }
+  /* Handy: Chat/Welt-Umschalter komplett ausblenden */
+  .view-switch { display: none !important; }
+  /* Handy: Währung hat keinen Nutzen → Button ausblenden */
+  #coinPill { display: none !important; }
   .modal-content { width: 90vw; padding: 22px 16px; }
   .modal-content h2 { font-size: 1.4rem; }
   #chatContainer {
@@ -800,8 +819,8 @@ button { font-family: var(--font-body); }
     flex-direction: column;
     flex-shrink: 0;
   }
-  #onlineList { display: flex; flex-wrap: wrap; gap: 8px; overflow-y: auto; }
-  #onlineList li { margin-bottom: 0; padding: 3px 10px; font-size: 0.78rem; }
+  #onlineList { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  #onlineList li { margin-bottom: 0; padding: 3px 10px; font-size: 0.78rem; flex-shrink: 0; white-space: nowrap; }
   .sidebar h3 { margin-bottom: 6px; font-size: 0.85rem; text-align: left; }
   .sidebar h3::after { margin: 6px 0 0; }
   .message { max-width: 95%; font-size: 0.9rem; }
@@ -812,7 +831,7 @@ button { font-family: var(--font-body); }
   .game-btn { font-size: 12px; padding: 8px 10px; }
   .toggle-btn { padding: 10px 5px; right: -35px; }
   .admin-btn { padding: 8px 14px; font-size: 0.8rem; }
-  .voice-mobile-toggle { display: block; }
+  .voice-toggle-btn { padding: 10px 5px; left: -35px; }
 }
 
 /* Coming Soon — hochwertig, dunkel, Cucuri Branding */

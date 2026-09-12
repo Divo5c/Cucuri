@@ -2051,7 +2051,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const voiceLeaveBtns = () => voiceQuery(".voice-panel__actions .voice-action--danger");
   const voiceLists = () => voiceQuery("ul.voice-members");
   const voiceCountEls = () => voiceQuery(".voice-panel__room small");
-  let stream = null, roomId = null, muted = false, joining = false;
+  let stream = null, roomId = null, muted = false, joining = false, listenOnly = false;
   const peers = new Map();
   const peerMuted = new Map(); // socketId -> true (Stummschaltung der anderen)
   const rtcConfig = {
@@ -2066,7 +2066,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
   };
   function setVoiceStatus(text, connected = false) { voiceStatusEls().forEach((el) => (el.textContent = text)); voiceDotEls().forEach((dot) => dot.classList.toggle("connected", connected)); }
-  function updateVoiceButtons() { const joined = Boolean(roomId); voiceJoinBtns().forEach((b) => { b.textContent = joined ? "Im Voice verbunden" : "Voice beitreten"; b.disabled = joining || joined; }); voiceMuteBtns().forEach((b) => { b.textContent = muted ? "Mikro aktivieren" : "Mikro stumm"; b.disabled = !joined; }); voiceLeaveBtns().forEach((b) => (b.disabled = !joined)); }
+  function updateVoiceButtons() { const joined = Boolean(roomId); voiceJoinBtns().forEach((b) => { b.textContent = joined ? (listenOnly ? "Verbunden (nur Zuhören)" : "Im Voice verbunden") : "Voice beitreten"; b.disabled = joining || joined; }); voiceMuteBtns().forEach((b) => { if (listenOnly) { b.textContent = "Nur Zuhören"; b.disabled = true; } else { b.textContent = muted ? "Mikro aktivieren" : "Mikro stumm"; b.disabled = !joined; } }); voiceLeaveBtns().forEach((b) => (b.disabled = !joined)); }
   function renderMembers(members = []) {
     const myId = socket.id;
     voiceLists().forEach((list) => {
@@ -2074,7 +2074,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!members.length) list.innerHTML = '<li class="voice-members__empty">Noch niemand im Raum</li>';
       members.forEach((member) => {
         const isSelf = member.socketId && member.socketId === myId;
-        const isMuted = isSelf ? muted : peerMuted.get(member.socketId) === true;
+        const isMuted = isSelf ? (muted || listenOnly) : peerMuted.get(member.socketId) === true;
         const item = document.createElement("li");
         item.className = "voice-member" + (isMuted ? " is-muted" : "");
         item.dataset.socket = member.socketId;
@@ -2157,7 +2157,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function closePeer(id) { peers.get(id)?.close(); peers.delete(id); stopSpeakingMonitor(id); document.querySelector(`audio[data-voice-peer="${id}"]`)?.remove(); }
   function peerFor(id) {
     const peer = new RTCPeerConnection(rtcConfig);
-    stream.getTracks().forEach((track) => peer.addTrack(track, stream));
+    if (stream) stream.getTracks().forEach((track) => peer.addTrack(track, stream));
     peer.onicecandidate = ({ candidate }) => candidate && socket.emit("iceCandidate", { targetId: id, candidate });
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === "connected") setVoiceStatus("Mit der Lobby verbunden", true);
@@ -2176,8 +2176,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voiceAudioCtx?.state === "suspended") voiceAudioCtx.resume();
     joining = true;
     updateVoiceButtons();
-    if (!stream && !(await ensureMic())) { joining = false; updateVoiceButtons(); return; }
-    setVoiceStatus("Verbinde mit der Lobby …");
+    if (!stream && !(await ensureMic())) {
+      // Handy über HTTP: kein Mikro möglich → trotzdem als Zuhörer beitreten
+      listenOnly = true;
+    } else {
+      listenOnly = false;
+    }
+    setVoiceStatus(listenOnly ? "Verbinde (nur Zuhören – Mikro braucht HTTPS) …" : "Verbinde mit der Lobby …");
     socket.emit("getVoiceRooms");
     setTimeout(() => { if (joining && !roomId) { joining = false; setVoiceStatus("Keine Antwort – erneut auf Beitreten klicken"); updateVoiceButtons(); } }, 8000);
   }
@@ -2186,16 +2191,16 @@ document.addEventListener("DOMContentLoaded", () => {
     peers.forEach((_, id) => closePeer(id));
     stopSpeakingMonitor("local");
     stream?.getTracks().forEach((track) => track.stop());
-    stream = null; roomId = null; muted = false; joining = false;
+    stream = null; roomId = null; muted = false; joining = false; listenOnly = false;
     peerMuted.clear();
     setVoiceStatus("Bereit zum Beitreten");
     updateVoiceButtons();
     renderMembers();
   }
-  socket.on("voiceRoomsList", (rooms) => { joining = false; if (!stream) { updateVoiceButtons(); return; } const room = rooms.find((item) => item.isDefault) || rooms[0]; if (!room) { updateVoiceButtons(); return setVoiceStatus("Lobby ist noch nicht verfügbar"); } roomId = room._id; updateVoiceButtons(); socket.emit("joinVoiceRoom", { roomId }); });
+  socket.on("voiceRoomsList", (rooms) => { joining = false; if (!stream && !listenOnly) { updateVoiceButtons(); return; } const room = rooms.find((item) => item.isDefault) || rooms[0]; if (!room) { updateVoiceButtons(); return setVoiceStatus("Lobby ist noch nicht verfügbar"); } roomId = room._id; updateVoiceButtons(); socket.emit("joinVoiceRoom", { roomId }); });
   socket.on("voicePresence", ({ roomId: updatedRoom, members }) => { if (!roomId || updatedRoom === roomId) renderMembers(members); });
-  socket.on("voicePeers", async (ids) => { setVoiceStatus("Mit der Lobby verbunden", true); updateVoiceButtons(); if (worldActive) { socket.emit("worldJoin"); } for (const id of ids) { const peer = peerFor(id); peers.set(id, peer); const offer = await peer.createOffer(); await peer.setLocalDescription(offer); socket.emit("offer", { targetId: id, offer }); } });
-  socket.on("offer", async ({ fromId, offer }) => { if (!stream) return; let peer = peers.get(fromId); if (!peer) { peer = peerFor(fromId); peers.set(fromId, peer); } await peer.setRemoteDescription(offer); const answer = await peer.createAnswer(); await peer.setLocalDescription(answer); socket.emit("answer", { targetId: fromId, answer }); });
+  socket.on("voicePeers", async (ids) => { setVoiceStatus(listenOnly ? "Mit der Lobby verbunden (nur Zuhören)" : "Mit der Lobby verbunden", true); updateVoiceButtons(); if (worldActive) { socket.emit("worldJoin"); } for (const id of ids) { const peer = peerFor(id); peers.set(id, peer); const offer = await peer.createOffer(); await peer.setLocalDescription(offer); socket.emit("offer", { targetId: id, offer }); } });
+  socket.on("offer", async ({ fromId, offer }) => { let peer = peers.get(fromId); if (!peer) { peer = peerFor(fromId); peers.set(fromId, peer); } await peer.setRemoteDescription(offer); const answer = await peer.createAnswer(); await peer.setLocalDescription(answer); socket.emit("answer", { targetId: fromId, answer }); });
   socket.on("answer", async ({ fromId, answer }) => { const peer = peers.get(fromId); if (peer) await peer.setRemoteDescription(answer); });
   socket.on("iceCandidate", async ({ fromId, candidate }) => { const peer = peers.get(fromId); if (peer && candidate) await peer.addIceCandidate(candidate); });
   socket.on("userLeftVoice", ({ socketId }) => { peerMuted.delete(socketId); closePeer(socketId); });
@@ -2262,6 +2267,15 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", (event) => {
     if (event.target.closest(".voice-panel__status") && !stream) ensureMic();
   });
-  mobileToggle?.addEventListener("click", () => { mobileVoice.classList.toggle("open"); mobileVoice.setAttribute("aria-hidden", String(!mobileVoice.classList.contains("open"))); });
+  const voiceMenu = $("voiceMenu");
+  mobileToggle?.addEventListener("click", () => {
+    if (voiceMenu) {
+      voiceMenu.classList.toggle("closed");
+      mobileVoice.setAttribute("aria-hidden", String(voiceMenu.classList.contains("closed")));
+    } else {
+      mobileVoice.classList.toggle("open");
+      mobileVoice.setAttribute("aria-hidden", String(!mobileVoice.classList.contains("open")));
+    }
+  });
   window.addEventListener("beforeunload", leaveVoice);
 });
