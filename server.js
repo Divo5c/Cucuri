@@ -266,8 +266,24 @@ const WORLD_FLOORS = { villa: [0, 1], village: [0] };
 const WORLD_ROOMS = [
   "lounge", "kitchen", "living_room", "living", "gaming", "chill",
   "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway", "hallway_up", "balcony", "entrance",
-  "village_center", "village_road", "cafe", "shop", "post", "park", "rathaus", "village_house_01", "village_house_02", "village_house_03", "village_house_04", "village_house_05", "village_house_06", "village_residential"
+  "village_center", "village_road", "cafe", "shop", "post", "park", "rathaus", "village_house_01", "village_house_02", "village_house_03", "village_house_04", "village_house_05", "village_house_06", "village_residential",
+  "house_01_entry", "house_01_living", "house_01_kitchen", "house_01_bath", "house_01_bedroom", "house_02_entry", "house_02_living", "house_02_kitchen", "house_02_bath", "house_02_guest"
 ];
+// NPC Server Authority — 4 NPCs, waypoints, state machine
+const NPCS_SERVER = [
+  { id: "npc_post", name: "Postmitarbeiter", zone: "village", floor: 0, x: 570, y: 570, target: "village_center", state: "working", speed: 45 },
+  { id: "npc_anna", name: "Anna", zone: "village", floor: 0, x: 1200, y: 700, target: "shop", state: "walking", speed: 50 },
+  { id: "npc_ben", name: "Ben", zone: "village", floor: 0, x: 1830, y: 570, target: "park", state: "walking", speed: 48 },
+  { id: "npc_cafe", name: "Café-Mitarbeiter", zone: "village", floor: 0, x: 1760, y: 850, target: "cafe", state: "working", speed: 0 },
+];
+const VILLAGE_WAYPOINTS_SERVER = {
+  post: { x: 570, y: 570 }, shop: { x: 1830, y: 570 }, cafe: { x: 1760, y: 850 }, park: { x: 600, y: 850 },
+  rathaus: { x: 1200, y: 430 }, village_center: { x: 1200, y: 700 }, villa_gate: { x: 1200, y: 1100 },
+};
+let doorStates = new Map(); // doorId -> "open"/"closed" (default closed for house doors, open for interior)
+// House doors default closed, interior doors open
+for (const id of ["house_01_front", "house_02_front"]) doorStates.set(id, "closed");
+for (const id of ["kitchen_lounge", "living_lounge", "gaming_lounge"]) doorStates.set(id, "open");
 let lastWorldBroadcast = 0;
 
 function broadcastWorld() {
@@ -291,6 +307,39 @@ function leaveWorld(socket) {
   saveWorldPos(socket);
   if (worldUsers.delete(socket.id)) broadcastWorld();
 }
+// NPC Server Tick — 10 Hz, Broadcast 400ms
+setInterval(() => {
+  for (const npc of NPCS_SERVER) {
+    if (npc.speed === 0) continue; // working/cafe
+    const wp = VILLAGE_WAYPOINTS_SERVER[npc.target];
+    if (!wp) continue;
+    const dx = wp.x - npc.x, dy = wp.y - npc.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 10) {
+      const keys = Object.keys(VILLAGE_WAYPOINTS_SERVER);
+      let next;
+      do { next = keys[Math.floor(Math.random() * keys.length)]; } while (next === npc.target);
+      npc.target = next;
+      npc.state = "idle";
+    } else {
+      const step = npc.speed * 0.1;
+      npc.x += (dx / dist) * step;
+      npc.y += (dy / dist) * step;
+      npc.state = "walking";
+      // clamp
+      npc.x = Math.max(0, Math.min(WORLD_W, npc.x));
+      npc.y = Math.max(0, Math.min(WORLD_H, npc.y));
+    }
+  }
+}, 100);
+setInterval(() => {
+  // Filter café NPC wenn Café nicht fertig
+  CityState.findOne({ projectId: "cafe" }).lean().then((doc) => {
+    const showCafe = doc && doc.status === "completed";
+    const filtered = NPCS_SERVER.filter((n) => n.id !== "npc_cafe" || showCafe);
+    io.emit("npcUpdate", filtered);
+  }).catch(() => io.emit("npcUpdate", NPCS_SERVER.filter((n) => n.id !== "npc_cafe")));
+}, 400);
 
 // ===== Anti-Spam: 8x gleiche Nachricht -> 2 Min. Chat- + Voice-Sperre =====
 const tempBans = new Map(); // username -> Ablauf (ms)
@@ -1226,6 +1275,9 @@ io.on("connection", (socket) => {
       updatedAt: Date.now(),
     });
     socket.emit("worldJoined", { x: spawn.x, y: spawn.y, zone: spawn.zone, floor: spawn.floor, room: spawn.room });
+    // NPC Snapshot + Door States für neuen Client
+    socket.emit("npcUpdate", NPCS_SERVER.filter((n) => n.id !== "npc_cafe" || n.state !== "hidden"));
+    socket.emit("doorStates", Object.fromEntries(doorStates));
     broadcastWorld();
   });
 
@@ -1243,6 +1295,19 @@ io.on("connection", (socket) => {
     u.tempBanned = (tempBans.get(u.username) || 0) > Date.now();
     u.updatedAt = Date.now();
     broadcastWorldThrottled();
+  });
+
+  socket.on("doorUpdate", ({ doorId, state }) => {
+    const username = sessions.get(socket.id);
+    if (!username) return;
+    if (!doorStates.has(doorId)) return;
+    if (!["open", "closed"].includes(state)) return;
+    const u = worldUsers.get(socket.id);
+    if (!u) return;
+    // Distanz-Check (50px) + Zone/Floor
+    // Für Test: einfache Distanz, echte Door-Position aus WORLD_DOORS wäre ideal, hier generisch
+    doorStates.set(doorId, state);
+    io.emit("doorStates", Object.fromEntries(doorStates));
   });
 
   socket.on("worldLeave", () => leaveWorld(socket));

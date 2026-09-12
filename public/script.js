@@ -307,6 +307,18 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: "village_house_01", name: "Haus 1", x: 600, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
       { id: "village_house_02", name: "Haus 2", x: 1800, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
       { id: "village_house_03", name: "Haus 3", x: 600, y: 1000, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
+      // House 01 Interior (betretbar)
+      { id: "house_01_entry", name: "Haus 01 Eingang", x: 620, y: 960, w: 40, h: 20, zone: "village", floor: 0, floorColor: "rgba(200,180,140,.06)" },
+      { id: "house_01_living", name: "Haus 01 Wohnzimmer", x: 600, y: 900, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(150,130,200,.06)" },
+      { id: "house_01_kitchen", name: "Haus 01 Küche", x: 660, y: 900, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(170,200,215,.06)" },
+      { id: "house_01_bath", name: "Haus 01 Bad", x: 600, y: 940, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(140,190,200,.06)" },
+      { id: "house_01_bedroom", name: "Haus 01 Schlafzimmer", x: 660, y: 940, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(200,140,160,.06)" },
+      // House 02 Interior
+      { id: "house_02_entry", name: "Haus 02 Eingang", x: 1820, y: 960, w: 40, h: 20, zone: "village", floor: 0, floorColor: "rgba(200,180,140,.06)" },
+      { id: "house_02_living", name: "Haus 02 Wohnzimmer", x: 1800, y: 900, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(150,130,200,.06)" },
+      { id: "house_02_kitchen", name: "Haus 02 Küche", x: 1860, y: 900, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(170,200,215,.06)" },
+      { id: "house_02_bath", name: "Haus 02 Bad", x: 1800, y: 940, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(140,190,200,.06)" },
+      { id: "house_02_guest", name: "Haus 02 Gästezimmer", x: 1860, y: 940, w: 60, h: 40, zone: "village", floor: 0, floorColor: "rgba(180,160,200,.06)" },
       { id: "village_residential", name: "Wohnviertel", x: 400, y: 900, w: 1600, h: 200, zone: "village", floor: 0, floorColor: "rgba(160,140,120,.04)" },
     ],
     walls: [
@@ -337,6 +349,18 @@ document.addEventListener("DOMContentLoaded", () => {
       { x: 1276, y: 1200, w: 12, h: 180, zone: "villa", floor: 1 },
       // Dorf Außen
       { x: 380, y: 180, w: 1640, h: 12, zone: "village", floor: 0 },
+      // House 01 Wände
+      { x: 600, y: 900, w: 120, h: 12, zone: "village", floor: 0 },
+      { x: 600, y: 980, w: 40, h: 12, zone: "village", floor: 0 },
+      { x: 680, y: 980, w: 40, h: 12, zone: "village", floor: 0 },
+      { x: 600, y: 900, w: 12, h: 80, zone: "village", floor: 0 },
+      { x: 708, y: 900, w: 12, h: 80, zone: "village", floor: 0 },
+      // House 02 Wände
+      { x: 1800, y: 900, w: 120, h: 12, zone: "village", floor: 0 },
+      { x: 1800, y: 980, w: 40, h: 12, zone: "village", floor: 0 },
+      { x: 1880, y: 980, w: 40, h: 12, zone: "village", floor: 0 },
+      { x: 1800, y: 900, w: 12, h: 80, zone: "village", floor: 0 },
+      { x: 1908, y: 900, w: 12, h: 80, zone: "village", floor: 0 },
       { x: 380, y: 1100, w: 1640, h: 12, zone: "village", floor: 0 },
       { x: 380, y: 180, w: 12, h: 932, zone: "village", floor: 0 },
       { x: 2020, y: 180, w: 12, h: 932, zone: "village", floor: 0 },
@@ -442,22 +466,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const worldRemotes = new Map();
   // NPC Foundation — zone/floor-aware, server-authority vorbereitet
   const NPCS = [
-    { id: "npc_post", name: "Postmitarbeiter", zone: "village", floor: 0, x: 150, y: 170, target: "shop", state: "working", speed: 45, path: [] },
-    { id: "npc_anna", name: "Anna", zone: "village", floor: 0, x: 480, y: 300, target: "park", state: "walking", speed: 50, path: [] },
-    { id: "npc_ben", name: "Ben", zone: "village", floor: 0, x: 810, y: 170, target: "cafe", state: "walking", speed: 48, path: [] },
-    { id: "npc_cafe", name: "Café-Mitarbeiter", zone: "village", floor: 0, x: 740, y: 450, target: "cafe", state: "working", speed: 0, path: [] },
+    { id: "npc_post", name: "Postmitarbeiter", zone: "village", floor: 0, x: 570, y: 570, target: "shop", state: "working", speed: 45, path: [] },
+    { id: "npc_anna", name: "Anna", zone: "village", floor: 0, x: 1200, y: 700, target: "park", state: "walking", speed: 50, path: [] },
+    { id: "npc_ben", name: "Ben", zone: "village", floor: 0, x: 1830, y: 570, target: "cafe", state: "walking", speed: 48, path: [] },
+    { id: "npc_cafe", name: "Café-Mitarbeiter", zone: "village", floor: 0, x: 1760, y: 850, target: "cafe", state: "working", speed: 0, path: [] },
   ];
   const VILLAGE_WAYPOINTS = {
-    post: { x: 150, y: 170, zone: "village", floor: 0 },
-    shop: { x: 810, y: 170, zone: "village", floor: 0 },
-    cafe: { x: 740, y: 450, zone: "village", floor: 0 },
-    park: { x: 180, y: 450, zone: "village", floor: 0 },
-    rathaus: { x: 480, y: 140, zone: "village", floor: 0 },
-    village_center: { x: 480, y: 300, zone: "village", floor: 0 },
-    villa_gate: { x: 480, y: 500, zone: "village", floor: 0 },
-    street_north: { x: 480, y: 200, zone: "village", floor: 0 },
-    street_south: { x: 480, y: 400, zone: "village", floor: 0 },
+    post: { x: 570, y: 570, zone: "village", floor: 0 },
+    shop: { x: 1830, y: 570, zone: "village", floor: 0 },
+    cafe: { x: 1760, y: 850, zone: "village", floor: 0 },
+    park: { x: 600, y: 850, zone: "village", floor: 0 },
+    rathaus: { x: 1200, y: 430, zone: "village", floor: 0 },
+    village_center: { x: 1200, y: 700, zone: "village", floor: 0 },
+    villa_gate: { x: 1200, y: 1100, zone: "village", floor: 0 },
+    street_north: { x: 1200, y: 400, zone: "village", floor: 0 },
+    street_south: { x: 1200, y: 900, zone: "village", floor: 0 },
+    house_01_front: { x: 660, y: 980, zone: "village", floor: 0 },
+    house_02_front: { x: 1860, y: 980, zone: "village", floor: 0 },
   };
+  const doorStates = new Map();
   // A* Navigation — Grid 32px, berücksichtigt Wände/Möbel/Türen/Zonen/Floors
   function findPathAStar(start, goal, zone, floor) {
     zone = zone || worldPlayer.zone; floor = floor !== undefined ? floor : worldPlayer.floor;
@@ -574,8 +601,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== Interactables: datengetrieben {id, Typ, Position, Radius, Raum/Zone} =====
   const INTERACTABLES = [
     // Villa EG
-    { id: "villa_exit", type: "zone", x: 120, y: 560, range: 45, room: "entrance", zone: "villa", floor: 0, toZone: "village", toPos: { x: 480, y: 500, zone: "village", floor: 0 } },
-    { id: "village_entry", type: "zone", x: 480, y: 500, range: 45, room: "village_center", zone: "village", floor: 0, toZone: "villa", toPos: { x: 120, y: 540, zone: "villa", floor: 0 } },
+    { id: "villa_exit", type: "zone", x: 920, y: 1880, range: 45, room: "entrance", zone: "villa", floor: 0, toZone: "village", toPos: { x: 1200, y: 1100, zone: "village", floor: 0 } },
+    { id: "village_entry", type: "zone", x: 1200, y: 1100, range: 45, room: "village_center", zone: "village", floor: 0, toZone: "villa", toPos: { x: 920, y: 1860, zone: "villa", floor: 0 } },
+    { id: "house_01_front", type: "door", x: 660, y: 980, range: 40, room: "house_01_entry", zone: "village", floor: 0, doorId: "house_01_front" },
+    { id: "house_02_front", type: "door", x: 1860, y: 980, range: 40, room: "house_02_entry", zone: "village", floor: 0, doorId: "house_02_front" },
     { id: "stairs_up", type: "stairs", x: 510, y: 360, range: 45, room: "lounge", zone: "villa", floor: 0, toFloor: 1, toPos: { x: 510, y: 360, zone: "villa", floor: 1 } },
     { id: "stairs_down", type: "stairs", x: 510, y: 360, range: 45, room: "hallway_up", zone: "villa", floor: 1, toFloor: 0, toPos: { x: 510, y: 360, zone: "villa", floor: 0 } },
     { id: "fridge", type: "shop", shopId: "fridge", x: 272, y: 150, range: 55, room: "kitchen", zone: "villa", floor: 0 },
@@ -619,10 +648,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function interactLabel(it) {
     if (!it) return "";
+    const doorState = it.doorId ? (doorStates.get(it.doorId) || "closed") : null;
     switch (it.type) {
       case "voice": return roomId ? "[E] Voice verlassen" : "[E] Voice beitreten";
       case "zone": return it.toZone === "village" ? "[E] Nach draußen" : "[E] Betreten";
       case "stairs": return it.toFloor > worldPlayer.floor ? "[E] Nach oben" : "[E] Nach unten";
+      case "door": return doorState === "closed" ? "[E] Tür öffnen" : "[E] Tür schließen";
       case "sit": return worldPlayer.sitting ? "[E] Aufstehen" : "[E] Hinsetzen";
       case "job": return activeJob ? "[E] Auftrag ansehen" : "[E] Job annehmen";
       case "dropoff": return "[E] Lieferung abgeben";
@@ -690,7 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
         worldPlayer.room = worldRoomAt(to.x, to.y, to.zone, to.floor);
         worldPlayer.sitting = false;
         worldPlayer.seatId = null;
-        worldStatic = null;
+        worldStaticCache.delete(`${to.zone}_${to.floor}`);
         worldCam.x = to.x;
         worldCam.y = to.y;
         worldEmitMove(true);
@@ -706,9 +737,15 @@ document.addEventListener("DOMContentLoaded", () => {
         worldPlayer.room = worldRoomAt(to.x, to.y, worldPlayer.zone, to.toFloor);
         worldPlayer.sitting = false;
         worldPlayer.seatId = null;
-        worldStatic = null;
+        worldStaticCache.delete(`${worldPlayer.zone}_${to.toFloor}`);
         worldEmitMove(true);
         worldNote(to.toFloor > 0 ? "Obergeschoss." : "Erdgeschoss.");
+        break;
+      }
+      case "door": {
+        const cur = doorStates.get(it.doorId) || "closed";
+        const next = cur === "closed" ? "open" : "closed";
+        socket.emit("doorUpdate", { doorId: it.doorId, state: next });
         break;
       }
       case "hub":
@@ -1519,14 +1556,30 @@ document.addEventListener("DOMContentLoaded", () => {
     worldVoiceUpdate();
   });
 
-  socket.on("worldJoined", ({ x, y }) => {
-    // Spawn vom Server (letzte Position oder Standard) nur übernehmen, wenn noch nicht gelaufen.
+  socket.on("doorStates", (states) => {
+    for (const [id, st] of Object.entries(states || {})) doorStates.set(id, st);
+    worldStaticCache.clear();
+  });
+  socket.on("npcUpdate", (npcs) => {
+    for (const srv of npcs || []) {
+      const local = NPCS.find((n) => n.id === srv.id);
+      if (local) {
+        // Server authoritative — interpolate via tx/ty
+        local.tx = srv.x; local.ty = srv.y;
+        local.target = srv.target; local.state = srv.state;
+        local.zone = srv.zone; local.floor = srv.floor;
+      }
+    }
+  });
+  socket.on("worldJoined", ({ x, y, zone, floor, room }) => {
     if (!worldJoinFresh) return;
     worldJoinFresh = false;
     if (Number.isFinite(x) && Number.isFinite(y)) {
-      worldPlayer.x = Math.max(20, Math.min(940, x));
-      worldPlayer.y = Math.max(20, Math.min(580, y));
-      worldPlayer.room = worldRoomAt(worldPlayer.x, worldPlayer.y);
+      worldPlayer.x = Math.max(20, Math.min(WORLD.w - 20, x));
+      worldPlayer.y = Math.max(20, Math.min(WORLD.h - 20, y));
+      if (zone && WORLD_ZONES.includes(zone)) worldPlayer.zone = zone;
+      if (Number.isFinite(floor)) worldPlayer.floor = floor;
+      worldPlayer.room = room || worldRoomAt(worldPlayer.x, worldPlayer.y, worldPlayer.zone, worldPlayer.floor);
       worldCam.x = worldPlayer.x;
       worldCam.y = worldPlayer.y;
       worldEmitMove(true);
