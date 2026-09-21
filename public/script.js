@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const currentUser = () => localStorage.getItem("cucuri_username");
   // Identität DIESES Tabs (localStorage teilen sich alle Tabs -> pro Tab merken)
   let sessionUsername = null;
+  let silentLogin = false; // Token-Auto-Login (Reconnect/Reload): kein Success-Sound
   const activeUser = () => sessionUsername || currentUser();
   const PUBLIC_WORLD_ENABLED = false;
   const isWorldAllowed = () => PUBLIC_WORLD_ENABLED || activeUser() === "Divo";
@@ -21,21 +22,83 @@ document.addEventListener("DOMContentLoaded", () => {
   $("switchToLogin")?.addEventListener("click", (e) => { e.preventDefault(); showTab("loginTab"); });
   $("switchToRegister")?.addEventListener("click", (e) => { e.preventDefault(); showTab("registerTab"); });
   $("closeBtn")?.addEventListener("click", () => authModal?.classList.remove("active"));
-  $("registerBtn")?.addEventListener("click", () => socket.emit("register", { username: $("regUsername").value.trim(), password: $("regPassword").value.trim() }));
-  $("loginBtn")?.addEventListener("click", () => socket.emit("login", { username: $("loginUsername").value.trim(), password: $("loginPassword").value.trim() }));
+  // Client-Validierung (nur UX — Security-Grenze ist der Server).
+  const USERNAME_RE_CLIENT = /^[A-Za-z0-9_äöüÄÖÜß-]{3,20}$/;
+  $("registerBtn")?.addEventListener("click", () => {
+    const name = $("regUsername").value.trim();
+    if (!USERNAME_RE_CLIENT.test(name)) { $("registerError").textContent = "Username: 3–20 Zeichen (Buchstaben, Zahlen, _, -, äöüß)."; return; }
+    socket.emit("register", { username: name, password: $("regPassword").value.trim() });
+  });
+  // Login-UX: Loading-State + Doppelklick-Schutz (nur UI, Auth-Logik unberührt).
+  // Stufentexte bei langsamer Verbindung (2s/5s), Client-Timeout entsperrt
+  // nur den Button; Server-Antworten bleiben gültig.
+  let loginPending = false, loginTimer = null, loginStage2 = null, loginStage5 = null;
+  const LOGIN_CLIENT_TIMEOUT_MS = 45000;
+  function clearLoginTimers() {
+    [loginTimer, loginStage2, loginStage5].forEach((t) => { if (t) clearTimeout(t); });
+    loginTimer = loginStage2 = loginStage5 = null;
+  }
+  function setLoginLoading(on) {
+    const btn = $("loginBtn");
+    if (btn) {
+      btn.disabled = on;
+      btn.textContent = on ? "Einloggen…" : "Einloggen";
+      btn.classList.toggle("loading", on);
+    }
+    if (!on) clearLoginTimers();
+  }
+  function startLoginPending() {
+    if (loginPending) return false;
+    loginPending = true;
+    setLoginLoading(true);
+    loginStage2 = setTimeout(() => {
+      if (!loginPending) return;
+      const btn = $("loginBtn");
+      if (btn) btn.textContent = "Verbindung wird hergestellt…";
+    }, 2000);
+    loginStage5 = setTimeout(() => {
+      if (!loginPending) return;
+      const btn = $("loginBtn");
+      if (btn) btn.textContent = "Das dauert gerade etwas länger…";
+    }, 5000);
+    loginTimer = setTimeout(() => {
+      if (!loginPending) return;
+      loginPending = false;
+      setLoginLoading(false);
+      const le = $("loginError");
+      if (le) le.textContent = "Server antwortet nicht – bitte erneut versuchen.";
+    }, LOGIN_CLIENT_TIMEOUT_MS);
+    return true;
+  }
+  function endLoginPending() { loginPending = false; setLoginLoading(false); }
+  $("loginBtn")?.addEventListener("click", () => {
+    if (!startLoginPending()) return;
+    socket.emit("login", { username: $("loginUsername").value.trim(), password: $("loginPassword").value.trim() });
+  });
   ["regUsername", "regPassword", "loginUsername", "loginPassword"].forEach((id) => $(id)?.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $(id.startsWith("reg") ? "registerBtn" : "loginBtn")?.click(); } }));
-  socket.on("registerSuccess", () => { $("registerError").textContent = "Erfolgreich registriert. Bitte einloggen."; showTab("loginTab"); });
-  socket.on("registerError", (message) => { $("registerError").textContent = message; });
-  socket.on("loginError", (message) => { $("loginError").textContent = message; sessionUsername = null; try { localStorage.removeItem("cucuri_session"); } catch {} });
+  socket.on("registerSuccess", () => { $("registerError").textContent = "Erfolgreich registriert. Bitte einloggen."; showTab("loginTab"); playSound("ui/success"); });
+  socket.on("registerError", (message) => { $("registerError").textContent = message; playSound("ui/error"); });
+  socket.on("loginError", (message) => { endLoginPending(); $("loginError").textContent = message; sessionUsername = null; try { localStorage.removeItem("cucuri_session"); } catch {} playSound("ui/error"); });
   // Reconnect: Sitzung nach Server-Neustart automatisch wiederherstellen
   let socketFirstConnect = true;
+  socket.on("disconnect", () => {
+    playSound("voice/disconnected");
+    if (loginPending) {
+      endLoginPending();
+      if (authModal?.classList.contains("active")) {
+        const le = $("loginError");
+        if (le) le.textContent = "Verbindung verloren – bitte erneut einloggen.";
+      }
+    }
+  });
   socket.on("connect", () => {
     if (socketFirstConnect) { socketFirstConnect = false; return; }
     if (worldActive) { socket.emit("worldJoin"); worldEmitMove(true); }
-    if (roomId || stream) leaveVoice();
+    if (roomId || stream) { playSound("voice/reconnecting"); leaveVoice(); }
     let sess = null;
     try { sess = JSON.parse(localStorage.getItem("cucuri_session") || "null"); } catch {}
     if (sess && sess.username && sess.token) {
+      silentLogin = true;
       socket.emit("loginWithToken", { username: sess.username, token: sess.token });
     } else if (currentUser()) {
       try { localStorage.removeItem("cucuri_username"); } catch {}
@@ -51,14 +114,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // Automatisch eingeloggt bleiben ("Dieses Gerät merken")
   try {
     const sess = JSON.parse(localStorage.getItem("cucuri_session") || "null");
-    if (sess && sess.username && sess.token) socket.emit("loginWithToken", { username: sess.username, token: sess.token });
+    if (sess && sess.username && sess.token) { silentLogin = true; socket.emit("loginWithToken", { username: sess.username, token: sess.token }); }
   } catch {}
   socket.on("loginSuccess", (data) => {
+    endLoginPending();
     const username = typeof data === "string" ? data : data?.username;
     const token = typeof data === "object" && data ? data.token : null;
     if (!username) return;
+    if (silentLogin) silentLogin = false; else playSound("ui/success");
     sessionUsername = username;
-    localStorage.setItem("cucuri_username", username);
+    try {
+      localStorage.setItem("cucuri_username", username);
+    } catch {
+      // Blockierter Storage (Private-Modus/Quota) darf einen erfolgreichen
+      // Login nicht unterbrechen — Remember-Me persistiert dann einfach nicht.
+    }
     try {
       if (token && $("rememberMe")?.checked !== false) localStorage.setItem("cucuri_session", JSON.stringify({ username, token }));
       else localStorage.removeItem("cucuri_session");
@@ -74,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("logoutBtn")?.addEventListener("click", () => {
     socket.emit("logout");
+    if (roomId) playSound("voice/leave"); else playSound("ui/click");
     leaveVoice();
     setView("chat");
     sessionUsername = null;
@@ -99,8 +170,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function addMessage(data) { if (!messages) return; const node = document.createElement("div"); node.className = "message"; if (data._id) node.dataset.mid = data._id; if (data.username === "System") node.classList.add("is-system"); node.innerHTML = `<div class="msg-header"><span class="msg-avatar"></span><span class="msg-username"></span><time class="msg-time"></time></div><div class="msg-text"></div>`; const unameEl = node.querySelector(".msg-username"); const msgIsAdmin = data.isAdmin === true; unameEl.textContent = data.username; unameEl.dataset.username = data.username; if (msgIsAdmin) { node.classList.add("is-admin"); const rank = document.createElement("span"); rank.className = "rank-badge"; rank.textContent = "Admin"; unameEl.after(rank); } else if (data.senderBanned === true) { node.classList.add("is-banned"); const ban = document.createElement("span"); ban.className = "rank-badge rank-badge--banned"; ban.textContent = "Gebannt"; unameEl.after(ban); } else if (data.color) unameEl.style.color = data.color; node.querySelector(".msg-avatar").textContent = data.avatar || ""; node.querySelector(".msg-time").textContent = data.timestamp || ""; node.querySelector(".msg-text").textContent = data.msg; if (activeUser() === "Divo" && data._id) { node.classList.add("deletable"); const del = document.createElement("button"); del.type = "button"; del.className = "msg-delete-btn"; del.textContent = "✕"; del.title = "Nachricht löschen"; del.addEventListener("click", (e) => { e.stopPropagation(); if (confirm("Diese Nachricht wirklich löschen?")) socket.emit("adminDeleteMessage", { id: data._id }); }); node.querySelector(".msg-header").append(del); } messages.appendChild(node); }
   socket.on("adminMessageDeleted", ({ id }) => { if (id) document.querySelector(`.message[data-mid="${id}"]`)?.remove(); });
   socket.on("loadHistory", (history) => { messages.innerHTML = ""; history.forEach(addMessage); messages.scrollTop = messages.scrollHeight; });
-  socket.on("chatMessage", (data) => { addMessage(data); messages.scrollTop = messages.scrollHeight; spawnWorldBubble(data.username, data.msg); });
-  const sendMessage = () => { const input = $("messageInput"); const text = input?.value.trim(); if (text) { socket.emit("chatMessage", text); input.value = ""; } };
+  socket.on("chatMessage", (data) => { addMessage(data); messages.scrollTop = messages.scrollHeight; spawnWorldBubble(data.username, data.msg); if (data.username !== activeUser()) playSound("chat/received"); });
+  const sendMessage = () => { const input = $("messageInput"); const text = input?.value.trim(); if (text) { socket.emit("chatMessage", text); input.value = ""; playSound("chat/sent"); } };
   $("sendBtn")?.addEventListener("click", sendMessage); $("messageInput")?.addEventListener("keydown", (e) => e.key === "Enter" && sendMessage());
   socket.on("updateUserList", ({ online, offline }) => {
     if (!onlineList) return;
@@ -148,8 +219,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Existing navigation and admin controls remain available alongside Voice.
   const gamesMenu = $("gamesMenu"), toggleGamesBtn = $("toggleGamesBtn");
-  toggleGamesBtn?.addEventListener("click", (event) => { event.stopPropagation(); gamesMenu?.classList.toggle("closed"); });
-  $("adminToggle")?.addEventListener("click", () => $("adminPanel")?.classList.toggle("hidden"));
+  toggleGamesBtn?.addEventListener("click", (event) => { event.stopPropagation(); gamesMenu?.classList.toggle("closed"); playSound("ui/click"); });
+  $("adminToggle")?.addEventListener("click", () => { $("adminPanel")?.classList.toggle("hidden"); playSound("ui/click"); });
   $("banBtn")?.addEventListener("click", () => { const username = $("banUsername")?.value.trim(); if (username) socket.emit("adminToggleBan", { username }); });
   $("renameBtn")?.addEventListener("click", () => { const oldName = $("oldName")?.value.trim(), newName = $("newName")?.value.trim(); if (oldName && newName) socket.emit("adminRenameUser", { oldName, newName }); });
   $("clearChatBtn")?.addEventListener("click", () => { if (confirm("Gesamten Chat wirklich löschen?")) socket.emit("adminClearChat"); });
@@ -165,11 +236,12 @@ document.addEventListener("DOMContentLoaded", () => {
   socket.on("adminEconomyResult", (res) => {
     const m = $("ecoMsg");
     if (m) { m.textContent = res.message || ""; m.style.color = res.ok ? "" : "#ff8d98"; }
+    playSound(res && res.ok ? "ui/success" : "ui/error");
   });
   socket.on("adminActionResult", ({ message }) => alert(message));
   const youthModal = $("jugendwortModal");
-  $("jugendwortBtn")?.addEventListener("click", () => youthModal?.classList.add("active"));
-  $("jwCloseBtn")?.addEventListener("click", () => youthModal?.classList.remove("active"));
+  $("jugendwortBtn")?.addEventListener("click", () => { if (youthModal && !youthModal.classList.contains("active")) { youthModal.classList.add("active"); playSound("ui/open"); } });
+  $("jwCloseBtn")?.addEventListener("click", () => { if (youthModal?.classList.contains("active")) { youthModal.classList.remove("active"); playSound("ui/close"); } });
 
   // ===== Profil =====
   const profileModal = $("profileModal");
@@ -233,6 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("profileEditFields")?.classList.toggle("hidden", !own);
     if (own) {
       buildPickers();
+      refreshSoundSettings();
       selectedAvatar = p.avatar || null;
       selectedColor = p.color || null;
       markSelected("avatarGrid", selectedAvatar || "");
@@ -241,16 +314,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   socket.on("profileSaved", (res) => {
-    if (!res?.ok) return profileMsg(res?.message || "Fehler.", true);
+    if (!res?.ok) { playSound("ui/error"); return profileMsg(res?.message || "Fehler.", true); }
+    playSound("ui/success");
     profileMsg("Gespeichert ✓");
     socket.emit("getProfile", { username: currentProfile });
   });
-  $("profileBtn")?.addEventListener("click", () => openProfile(activeUser()));
-  $("profileClose")?.addEventListener("click", () => profileModal?.classList.remove("active"));
+  $("profileBtn")?.addEventListener("click", () => { playSound("ui/open"); openProfile(activeUser()); });
+  $("profileClose")?.addEventListener("click", () => { if (profileModal?.classList.contains("active")) { profileModal.classList.remove("active"); playSound("ui/close"); } });
   $("profileSaveBtn")?.addEventListener("click", () => {
     profileMsg("Speichert …");
     socket.emit("saveProfile", { bio: $("profileBioInput")?.value || "", color: selectedColor, avatar: selectedAvatar });
   });
+  // Sound-Einstellungen (lokal, localStorage-Key cucuri_sound; kein Server).
+  function refreshSoundSettings() {
+    const s = SoundManager.getSettings();
+    const set = (id, v) => { const el = $(id); if (el) el.value = String(Math.round(v * 100)); };
+    const en = $("soundEnabled"); if (en) en.checked = s.enabled !== false;
+    set("soundMaster", s.master); set("soundUI", s.ui); set("soundNotif", s.notification);
+    set("soundVoice", s.voice); set("soundWorld", s.world); set("soundAmbient", s.ambient);
+  }
+  function initSoundSettings() {
+    if (initSoundSettings._done) return; initSoundSettings._done = true;
+    const num = (id, fn) => { $(id)?.addEventListener("input", (e) => fn(Number(e.target.value) / 100)); };
+    $("soundEnabled")?.addEventListener("change", (e) => SoundManager.setMuted(!e.target.checked));
+    num("soundMaster", (v) => SoundManager.setMasterVolume(v));
+    num("soundUI", (v) => SoundManager.setCategoryVolume("ui", v));
+    num("soundNotif", (v) => SoundManager.setCategoryVolume("notification", v));
+    num("soundVoice", (v) => SoundManager.setCategoryVolume("voice", v));
+    num("soundWorld", (v) => SoundManager.setCategoryVolume("world", v));
+    num("soundAmbient", (v) => SoundManager.setCategoryVolume("ambient", v));
+    refreshSoundSettings();
+  }
+  // HINWEIS: initSoundSettings() wird erst NACH dem SoundManager aufgerufen
+  // (weiter unten) — sonst Temporal-Dead-Zone-ReferenceError, der das ganze
+  // Init abbrechen und u.a. Login/Registrierung lahmlegen würde.
   // Klick auf Username (Chat) oder Lobby-Eintrag öffnet das Profil
   document.addEventListener("click", (event) => {
     if (event.target.closest("#profileModal")) return;
@@ -279,8 +376,11 @@ document.addEventListener("DOMContentLoaded", () => {
     $("chatContainer")?.classList.toggle("view-voice", view !== "chat");
     if (view === "world") worldStart(); else worldStop();
   }
-  $("viewBtnChat")?.addEventListener("click", () => setView("chat"));
-  $("viewBtnWorld")?.addEventListener("click", () => setView("world"));
+  $("viewBtnChat")?.addEventListener("click", () => { playSound("ui/click"); setView("chat"); });
+  $("viewBtnWorld")?.addEventListener("click", () => { playSound("ui/click"); setView("world"); });
+  // "Zurück ->" in der Welt: nur Ansicht wechseln (Chat + Lobby + Voice),
+  // Voice-Verbindung, Room, Stream und Mute-State bleiben unangetastet.
+  $("worldBackBtn")?.addEventListener("click", () => { playSound("ui/click"); setView("chat"); });
 
   // ===== 2D-Welt: Datenmodell (Geometrie zuerst, Deko danach) =====
   // Koordinatenraum 960x600 = Server-Protokoll (kein Backend-Change).
@@ -703,14 +803,14 @@ document.addEventListener("DOMContentLoaded", () => {
     worldPlayer.sitting = false;
     worldPlayer.seatId = null;
     worldEmitMove(true);
-    if (!silent) worldNote("Aufgestanden.");
+    if (!silent) { worldNote("Aufgestanden."); playSound("world/stand"); }
   }
   function doInteract() {
     const it = currentInteractable;
     if (!it || !worldActive) return;
     switch (it.type) {
       case "voice":
-        if (roomId) leaveVoice();
+        if (roomId) { playSound("voice/leave"); leaveVoice(); }
         else joinVoice();
         break;
       case "sit": {
@@ -721,6 +821,7 @@ document.addEventListener("DOMContentLoaded", () => {
         worldPlayer.sitting = true;
         worldPlayer.seatId = seat.id;
         worldEmitMove(true);
+        playSound("world/sit");
         break;
       }
       case "job":
@@ -783,15 +884,157 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   function openGameModal(id) {
     const m = $(id);
-    if (m) m.classList.add("active");
+    if (m && !m.classList.contains("active")) { m.classList.add("active"); playSound("ui/open"); }
   }
   function closeGameModals() {
+    const any = document.querySelector(".game-modal.active");
     document.querySelectorAll(".game-modal.active").forEach((m) => m.classList.remove("active"));
+    if (any) playSound("ui/close");
   }
-  // Sound-Architektur (Platzhalter; Voice-Audio bleibt getrennt)
-  function playSound(name) { void name; }
+  /* SOUND-MANAGER-START (Phase A+B+C: UI/Chat/Voice-Feedback; WebRTC unberührt) */
+  const SoundManager = (() => {
+    const STORE_KEY = "cucuri_sound";
+    const CATEGORIES = ["ui", "notification", "voice", "world", "ambient"];
+    const DEFAULTS = { enabled: true, master: 0.8, ui: 0.8, notification: 0.7, voice: 0.7, world: 0.7, ambient: 0.3 };
+    // name -> { file, category, cooldownMs, volume }
+    const SOUNDS = {
+      "ui/click":   { file: "audio/ui/click.wav",   category: "ui",           cooldown: 50,  volume: 0.8 },
+      "ui/open":    { file: "audio/ui/open.wav",    category: "ui",           cooldown: 100, volume: 0.8 },
+      "ui/close":   { file: "audio/ui/close.wav",   category: "ui",           cooldown: 100, volume: 0.8 },
+      "ui/success": { file: "audio/ui/success.wav", category: "ui",           cooldown: 300, volume: 0.9 },
+      "ui/error":   { file: "audio/ui/error.wav",   category: "ui",           cooldown: 300, volume: 0.9 },
+      "chat/sent":     { file: "audio/chat/sent.wav",     category: "notification", cooldown: 100, volume: 0.8 },
+      "chat/received": { file: "audio/chat/received.wav", category: "notification", cooldown: 100, volume: 1.0 },
+      "voice/join":         { file: "audio/voice/join.wav",         category: "voice", cooldown: 1000, volume: 0.9 },
+      "voice/leave":        { file: "audio/voice/leave.wav",        category: "voice", cooldown: 1000, volume: 0.9 },
+      "voice/user_join":    { file: "audio/voice/user_join.wav",    category: "voice", cooldown: 300,  volume: 0.7 },
+      "voice/user_leave":   { file: "audio/voice/user_leave.wav",   category: "voice", cooldown: 300,  volume: 0.7 },
+      "voice/mute":         { file: "audio/voice/mute.wav",         category: "voice", cooldown: 150,  volume: 0.8 },
+      "voice/unmute":       { file: "audio/voice/unmute.wav",       category: "voice", cooldown: 150,  volume: 0.8 },
+      "voice/reconnecting": { file: "audio/voice/reconnecting.wav", category: "voice", cooldown: 2000, volume: 0.8 },
+      "voice/disconnected": { file: "audio/voice/disconnected.wav", category: "voice", cooldown: 2000, volume: 0.9 },
+      "world/footstep":     { file: "audio/world/footstep.wav",     category: "world", cooldown: 100, volume: 0.6 },
+      "world/door_open":    { file: "audio/world/door_open.wav",    category: "world", cooldown: 300, volume: 0.8 },
+      "world/door_close":   { file: "audio/world/door_close.wav",   category: "world", cooldown: 300, volume: 0.8 },
+      "world/sit":          { file: "audio/world/sit.wav",          category: "world", cooldown: 200, volume: 0.8 },
+      "world/stand":        { file: "audio/world/stand.wav",        category: "world", cooldown: 200, volume: 0.8 },
+      "world/job_start":    { file: "audio/world/job_start.wav",    category: "world", cooldown: 500, volume: 0.9 },
+      "world/job_complete": { file: "audio/world/job_complete.wav", category: "world", cooldown: 500, volume: 1.0 },
+    };
+    const POOL_SIZE = 3;
+    let settings = Object.assign({}, DEFAULTS);
+    let unlocked = false;
+    const lastPlay = new Map();   // name -> timestamp
+    const pools = new Map();      // name -> Audio[]
+    const poolIdx = new Map();    // name -> round-robin index
+    const missingWarned = new Set();
+    const clamp01 = (v) => Math.min(1, Math.max(0, Number(v) || 0));
+    function hasAudio() { return typeof Audio !== "undefined"; }
+    function loadSettings() {
+      try {
+        const raw = (typeof localStorage !== "undefined") && localStorage.getItem(STORE_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (s && typeof s === "object") {
+          if (typeof s.enabled === "boolean") settings.enabled = s.enabled;
+          ["master", "ui", "notification", "voice", "world", "ambient"].forEach((k) => {
+            if (typeof s[k] === "number" && Number.isFinite(s[k])) settings[k] = clamp01(s[k]);
+          });
+        }
+      } catch { /* kaputte Settings ignorieren, Defaults behalten */ }
+    }
+    function saveSettings() {
+      try {
+        if (typeof localStorage !== "undefined") localStorage.setItem(STORE_KEY, JSON.stringify(settings));
+      } catch { /* Storage voll/blockiert → still weitermachen */ }
+    }
+    function poolFor(name, file) {
+      let pool = pools.get(name);
+      if (!pool) {
+        pool = [];
+        pools.set(name, pool);
+        poolIdx.set(name, 0);
+      }
+      if (pool.length < POOL_SIZE && hasAudio()) {
+        try {
+          const el = new Audio(file);
+          el.preload = "auto";
+          el.addEventListener("error", () => {
+            pools.set(name, []); // defekt → nicht erneut versuchen
+            if (!missingWarned.has(name)) { missingWarned.add(name); try { console.warn("[sound] fehlt/defekt:", file); } catch {} }
+          });
+          pool.push(el);
+        } catch { return null; }
+      }
+      if (!pool.length) return null;
+      const i = poolIdx.get(name) || 0;
+      poolIdx.set(name, (i + 1) % pool.length);
+      return pool[i];
+    }
+    function play(name) {
+      const def = SOUNDS[name];
+      if (!def) return false;                    // unbekannt → still ignorieren
+      if (!settings.enabled) return false;
+      const now = Date.now();
+      if (now - (lastPlay.get(name) || 0) < def.cooldown) return false; // Cooldown
+      const vol = settings.master * (settings[def.category] ?? 1) * def.volume;
+      if (!(vol > 0)) return false;
+      if (!unlocked || !hasAudio()) return false; // vor User-Geste: überspringen
+      const el = poolFor(name, def.file);
+      if (!el) return false;
+      try {
+        el.volume = Math.min(1, vol);
+        el.currentTime = 0;
+        const p = el.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+        lastPlay.set(name, now);
+        return true;
+      } catch { return false; }
+    }
+    function unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      // Preload der Phase-Sounds (World/Ambient erst lazy in Phase D/E).
+      Object.entries(SOUNDS).forEach(([name, def]) => { poolFor(name, def.file); });
+    }
+    function bindUnlockOnce() {
+      if (typeof document === "undefined" || bindUnlockOnce._done) return;
+      bindUnlockOnce._done = true;
+      ["pointerdown", "keydown", "touchstart"].forEach((ev) =>
+        document.addEventListener(ev, unlock, { once: true, passive: true }),
+      );
+    }
+    function getSettings() { return Object.assign({}, settings); }
+    function setMasterVolume(v) { settings.master = clamp01(v); saveSettings(); }
+    function setCategoryVolume(cat, v) {
+      if (!CATEGORIES.includes(cat)) return;
+      settings[cat] = clamp01(v); saveSettings();
+    }
+    function setMuted(m) { settings.enabled = !m; saveSettings(); }
+    loadSettings();
+    bindUnlockOnce();
+    return {
+      play, unlock, getSettings, saveSettings, loadSettings,
+      setMasterVolume, setCategoryVolume, setMuted,
+      categories: CATEGORIES.slice(), defaults: Object.assign({}, DEFAULTS),
+    };
+  })();
+  function playSound(name) { SoundManager.play(name); }
+  /* SOUND-MANAGER-END */
+  initSoundSettings();
   // ===== Input: WASD + Pfeile (kein Click-to-Move). Tippen blockiert nie. =====
   const worldKeys = { up: false, down: false, left: false, right: false };
+  // Schritt-Distanz (tatsächlich zurückgelegte Pixel, daher kollisions-sicher)
+  let stepAcc = 0, stepLX = 0, stepLY = 0, stepInit = false;
+  const STEP_PX = 45; // ~260ms bei 175px/s
+  function worldStepSound() {
+    if (!worldActive || worldPlayer.sitting) { stepInit = false; return; }
+    const dx = worldPlayer.x - stepLX, dy = worldPlayer.y - stepLY;
+    if (!stepInit) { stepInit = true; stepLX = worldPlayer.x; stepLY = worldPlayer.y; return; }
+    stepAcc += Math.hypot(dx, dy);
+    stepLX = worldPlayer.x; stepLY = worldPlayer.y;
+    if (stepAcc >= STEP_PX) { stepAcc = 0; playSound("world/footstep"); }
+  }
   const WORLD_KEYMAP = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right" };
   function worldTypingTarget(t) {
     return Boolean(t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable));
@@ -1479,6 +1722,9 @@ document.addEventListener("DOMContentLoaded", () => {
         worldVoiceUpdate();
       }
       worldEmitMove(false);
+      worldStepSound();
+    } else {
+      stepInit = false; stepAcc = 0;
     }
     updateInteractPrompt();
     updateNPCs(dt);
@@ -1588,7 +1834,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   socket.on("doorStates", (states) => {
-    for (const [id, st] of Object.entries(states || {})) doorStates.set(id, st);
+    // Sound nur bei echter Zustandsänderung (kein Spam bei Full-State-Broadcasts)
+    for (const [id, st] of Object.entries(states || {})) {
+      const prev = doorStates.get(id);
+      if (prev !== undefined && prev !== st) playSound(st === "open" ? "world/door_open" : "world/door_close");
+      doorStates.set(id, st);
+    }
     worldStaticCache.clear();
   });
   socket.on("npcUpdate", (npcs) => {
@@ -1731,7 +1982,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   socket.on("jobUpdate", (data) => {
     activeJob = (data && data.job) || null;
-    if (data && data.completed) worldNote(`Auftrag erledigt! +${data.completed.reward} 🪙`);
+    if (data && data.completed) { worldNote(`Auftrag erledigt! +${data.completed.reward} 🪙`); playSound("world/job_complete"); }
     renderJobPanel();
     if ($("jobModal")?.classList.contains("active")) renderJobModal();
   });
@@ -1740,6 +1991,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (el && res) {
       el.textContent = res.message || "";
       el.style.color = res.ok ? "" : "#ff8d98";
+      playSound(res.ok ? "world/job_start" : "ui/error");
     }
   });
   socket.on("cityData", (data) => {
@@ -2052,6 +2304,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const voiceLists = () => voiceQuery("ul.voice-members");
   const voiceCountEls = () => voiceQuery(".voice-panel__room small");
   let stream = null, roomId = null, muted = false, joining = false, listenOnly = false;
+  // Voice-Feedback-State (nur UI-Sounds, kein WebRTC-Einfluss)
+  let voiceJoinPlayed = false;       // Join-Sound genau einmal pro Beitritt
+  let voiceMembersInit = false;      // erste Member-Liste still übernehmen
+  const voicePrevMembers = new Set(); // Socket-IDs für Join/Leave-Diff
   const peers = new Map();
   const peerMuted = new Map(); // socketId -> true (Stummschaltung der anderen)
   const rtcConfig = {
@@ -2096,6 +2352,21 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
     voiceCountEls().forEach((el) => (el.textContent = `${members.length} Teilnehmer`));
+    // Join/Leave-Feedback: Diff gegen vorherige Liste (ohne Selbst, ohne Initial-Feuerwerk, nicht nach Leave).
+    if (roomId) {
+      const cur = new Set(members.filter((m) => m.socketId && m.socketId !== socket.id).map((m) => m.socketId));
+      if (!voiceMembersInit) {
+        voiceMembersInit = true;
+      } else {
+        let joined = false, left = false;
+        cur.forEach((id) => { if (!voicePrevMembers.has(id)) joined = true; });
+        voicePrevMembers.forEach((id) => { if (!cur.has(id)) left = true; });
+        if (joined) playSound("voice/user_join");
+        if (left) playSound("voice/user_leave");
+      }
+      voicePrevMembers.clear();
+      cur.forEach((id) => voicePrevMembers.add(id));
+    }
   }
   // Sprechanzeige: misst pro Stream die Lautstärke und markiert den Eintrag.
   let voiceAudioCtx = null;
@@ -2161,7 +2432,7 @@ document.addEventListener("DOMContentLoaded", () => {
     peer.onicecandidate = ({ candidate }) => candidate && socket.emit("iceCandidate", { targetId: id, candidate });
     peer.onconnectionstatechange = () => {
       if (peer.connectionState === "connected") setVoiceStatus("Mit der Lobby verbunden", true);
-      else if (peer.connectionState === "failed") { setVoiceStatus("Verbindung fehlgeschlagen – bitte erneut beitreten"); closePeer(id); }
+      else if (peer.connectionState === "failed") { setVoiceStatus("Verbindung fehlgeschlagen – bitte erneut beitreten"); playSound("voice/disconnected"); closePeer(id); }
     };
     peer.ontrack = ({ streams }) => {
       let audio = document.querySelector(`audio[data-voice-peer="${id}"]`);
@@ -2175,7 +2446,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (roomId || joining) return;
     if (voiceAudioCtx?.state === "suspended") voiceAudioCtx.resume();
     joining = true;
+    voiceJoinPlayed = false;
+    voiceMembersInit = false;
     updateVoiceButtons();
+    playSound("voice/reconnecting");
     if (!stream && !(await ensureMic())) {
       // Handy über HTTP: kein Mikro möglich → trotzdem als Zuhörer beitreten
       listenOnly = true;
@@ -2184,7 +2458,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     setVoiceStatus(listenOnly ? "Verbinde (nur Zuhören – Mikro braucht HTTPS) …" : "Verbinde mit der Lobby …");
     socket.emit("getVoiceRooms");
-    setTimeout(() => { if (joining && !roomId) { joining = false; setVoiceStatus("Keine Antwort – erneut auf Beitreten klicken"); updateVoiceButtons(); } }, 8000);
+    setTimeout(() => { if (joining && !roomId) { joining = false; setVoiceStatus("Keine Antwort – erneut auf Beitreten klicken"); updateVoiceButtons(); playSound("voice/disconnected"); } }, 8000);
   }
   function leaveVoice() {
     if (roomId) socket.emit("leaveVoiceRoom");
@@ -2192,14 +2466,15 @@ document.addEventListener("DOMContentLoaded", () => {
     stopSpeakingMonitor("local");
     stream?.getTracks().forEach((track) => track.stop());
     stream = null; roomId = null; muted = false; joining = false; listenOnly = false;
+    voiceJoinPlayed = false; voiceMembersInit = false; voicePrevMembers.clear();
     peerMuted.clear();
     setVoiceStatus("Bereit zum Beitreten");
     updateVoiceButtons();
     renderMembers();
   }
-  socket.on("voiceRoomsList", (rooms) => { joining = false; if (!stream && !listenOnly) { updateVoiceButtons(); return; } const room = rooms.find((item) => item.isDefault) || rooms[0]; if (!room) { updateVoiceButtons(); return setVoiceStatus("Lobby ist noch nicht verfügbar"); } roomId = room._id; updateVoiceButtons(); socket.emit("joinVoiceRoom", { roomId }); });
+  socket.on("voiceRoomsList", (rooms) => { joining = false; if (!stream && !listenOnly) { updateVoiceButtons(); return; } const room = rooms.find((item) => item.isDefault) || rooms[0]; if (!room) { updateVoiceButtons(); playSound("voice/disconnected"); return setVoiceStatus("Lobby ist noch nicht verfügbar"); } roomId = room._id; updateVoiceButtons(); socket.emit("joinVoiceRoom", { roomId }); });
   socket.on("voicePresence", ({ roomId: updatedRoom, members }) => { if (!roomId || updatedRoom === roomId) renderMembers(members); });
-  socket.on("voicePeers", async (ids) => { setVoiceStatus(listenOnly ? "Mit der Lobby verbunden (nur Zuhören)" : "Mit der Lobby verbunden", true); updateVoiceButtons(); if (worldActive) { socket.emit("worldJoin"); } for (const id of ids) { const peer = peerFor(id); peers.set(id, peer); const offer = await peer.createOffer(); await peer.setLocalDescription(offer); socket.emit("offer", { targetId: id, offer }); } });
+  socket.on("voicePeers", async (ids) => { setVoiceStatus(listenOnly ? "Mit der Lobby verbunden (nur Zuhören)" : "Mit der Lobby verbunden", true); updateVoiceButtons(); if (!voiceJoinPlayed) { voiceJoinPlayed = true; playSound("voice/join"); } if (worldActive) { socket.emit("worldJoin"); } for (const id of ids) { const peer = peerFor(id); peers.set(id, peer); const offer = await peer.createOffer(); await peer.setLocalDescription(offer); socket.emit("offer", { targetId: id, offer }); } });
   socket.on("offer", async ({ fromId, offer }) => { let peer = peers.get(fromId); if (!peer) { peer = peerFor(fromId); peers.set(fromId, peer); } await peer.setRemoteDescription(offer); const answer = await peer.createAnswer(); await peer.setLocalDescription(answer); socket.emit("answer", { targetId: fromId, answer }); });
   socket.on("answer", async ({ fromId, answer }) => { const peer = peers.get(fromId); if (peer) await peer.setRemoteDescription(answer); });
   socket.on("iceCandidate", async ({ fromId, candidate }) => { const peer = peers.get(fromId); if (peer && candidate) await peer.addIceCandidate(candidate); });
@@ -2212,13 +2487,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (st) st.textContent = isMuted ? "🔇" : "";
     });
   });
-  socket.on("voiceError", (message) => { leaveVoice(); setVoiceStatus(message); });
-  socket.on("voiceKicked", ({ message }) => { leaveVoice(); setVoiceStatus(message || "Aus dem Voice entfernt."); });
+  socket.on("voiceError", (message) => { leaveVoice(); setVoiceStatus(message); playSound("voice/disconnected"); });
+  socket.on("voiceKicked", ({ message }) => { leaveVoice(); setVoiceStatus(message || "Aus dem Voice entfernt."); playSound("voice/disconnected"); });
   function toggleMute() {
     if (!stream || !roomId) return;
     muted = !muted;
     stream.getAudioTracks().forEach((track) => (track.enabled = !muted));
     socket.emit("voiceMuteState", { muted });
+    playSound(muted ? "voice/mute" : "voice/unmute");
     // Eigener Eintrag sofort rot markieren (Server meldet es nur den anderen).
     document.querySelectorAll('.voice-member[data-mine="1"]').forEach((li) => {
       li.classList.toggle("is-muted", muted);
@@ -2235,7 +2511,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const button = event.target.closest(".voice-panel .voice-action");
     if (!button || button.disabled) return;
     if (button.classList.contains("voice-action--primary")) joinVoice();
-    else if (button.classList.contains("voice-action--danger")) leaveVoice();
+    else if (button.classList.contains("voice-action--danger")) { if (roomId) playSound("voice/leave"); leaveVoice(); }
     else toggleMute();
   });
   // Tastenkürzel: V = Voice beitreten/verlassen, M = stumm/aktiv (nicht beim Tippen)
@@ -2245,7 +2521,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
     if (!activeUser() || chatContainer?.classList.contains("hidden")) return;
     const key = event.key?.toLowerCase();
-    if (key === "v") { event.preventDefault(); roomId ? leaveVoice() : joinVoice(); }
+    if (key === "v") { event.preventDefault(); if (roomId) { playSound("voice/leave"); leaveVoice(); } else joinVoice(); }
     else if (key === "m") { event.preventDefault(); toggleMute(); }
   });
   // E = interagieren mit dem nächsten Objekt, Escape = Modals schließen / aufstehen.
@@ -2269,6 +2545,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   const voiceMenu = $("voiceMenu");
   mobileToggle?.addEventListener("click", () => {
+    playSound("ui/click");
     if (voiceMenu) {
       voiceMenu.classList.toggle("closed");
       mobileVoice.setAttribute("aria-hidden", String(voiceMenu.classList.contains("closed")));

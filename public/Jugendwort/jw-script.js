@@ -17,14 +17,26 @@
     } catch { return null; }
   }
 
+  // Session-Token aus dem Haupt-Login (gleiche Origin → gleiches localStorage).
+  // Identität kommt serverseitig AUSSCHLIESSLICH aus diesem Token, niemals aus ?user=.
+  function getAuthToken() {
+    try {
+      const sess = JSON.parse(localStorage.getItem("cucuri_session") || "null");
+      return (sess && typeof sess.token === "string") ? sess.token : null;
+    } catch { return null; }
+  }
+  function authHeaders(extra) {
+    const h = Object.assign({}, extra);
+    const t = getAuthToken();
+    if (t) h["x-auth-token"] = t;
+    return h;
+  }
+
   async function fetchWordsFromServer() {
     currentUser = getCurrentUser();
-    const url = currentUser
-      ? `/api/jugendwort/votes?user=${encodeURIComponent(currentUser)}`
-      : "/api/jugendwort/votes";
 
     try {
-      const res = await fetch(url);
+      const res = await fetch("/api/jugendwort/votes", { headers: authHeaders() });
       if (!res.ok) throw new Error("Fehler beim Laden");
       const data = await res.json();
       words = data.words || [];
@@ -42,9 +54,9 @@
       alert("Bitte im Chat einloggen.");
       return;
     }
-    const res = await fetch(`/api/jugendwort/vote?user=${encodeURIComponent(currentUser)}`, {
+    const res = await fetch("/api/jugendwort/vote", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ wordId: id })
     });
     const data = await res.json();
@@ -70,7 +82,7 @@
     }
     if (!confirm("Willst du deine Stimme wirklich löschen?")) return;
 
-    const res = await fetch(`/api/jugendwort/vote?user=${encodeURIComponent(currentUser)}`, { method: "DELETE" });
+    const res = await fetch("/api/jugendwort/vote", { method: "DELETE", headers: authHeaders() });
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || "Fehler beim Löschen.");
@@ -224,7 +236,7 @@
     }
 
     try {
-      const res = await fetch(`/api/jugendwort/admin?user=${encodeURIComponent(currentUser)}`);
+      const res = await fetch("/api/jugendwort/admin", { headers: authHeaders() });
       const data = await res.json();
       if (!res.ok) {
         currentVoteEl.textContent = data.error || "Fehler bei Admin-Daten.";
@@ -242,9 +254,15 @@
       userTbody.innerHTML = "";
       users.forEach(u => {
         const chosen = words.find(w => w.id === u.jugendwortChoice);
-        const label = chosen ? chosen.term : (u.jugendwortChoice || "-");
+        const label = chosen ? chosen.term : "-";
+        // XSS-sicher: Username/Metadaten nur via textContent, nie innerHTML.
         const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${u.username}</td><td>${label}</td>`;
+        const tdUser = document.createElement("td");
+        tdUser.textContent = u.username || "?";
+        const tdWord = document.createElement("td");
+        tdWord.textContent = label;
+        tr.appendChild(tdUser);
+        tr.appendChild(tdWord);
         userTbody.appendChild(tr);
       });
 

@@ -19,7 +19,6 @@
         <button id="adminToggle" class="admin-btn hidden">Admin</button>
         <button id="profileBtn" class="admin-btn hidden">Profil</button>
         <button id="jugendwortBtn" class="admin-btn">Jugendwort</button>
-        <button id="coinPill" class="admin-btn hidden" title="Geldbörse öffnen">🪙 –</button>
         <button id="logoutBtn" class="admin-btn hidden">Logout</button>
       </div>
     </header>
@@ -87,6 +86,17 @@
             placeholder="Erzähl kurz was über dich..."
           ></textarea>
           <button id="profileSaveBtn">Speichern</button>
+          <h3>🔊 Sounds</h3>
+          <div id="soundSettings" class="sound-settings">
+            <label class="sound-row sound-toggle"><input type="checkbox" id="soundEnabled" checked /> Sounds an</label>
+            <label class="sound-row">Master<input type="range" id="soundMaster" min="0" max="100" step="1" value="80" /></label>
+            <label class="sound-row">UI<input type="range" id="soundUI" min="0" max="100" step="1" value="80" /></label>
+            <label class="sound-row">Benachrichtigungen<input type="range" id="soundNotif" min="0" max="100" step="1" value="70" /></label>
+            <label class="sound-row">Voice<input type="range" id="soundVoice" min="0" max="100" step="1" value="70" /></label>
+            <label class="sound-row">World<input type="range" id="soundWorld" min="0" max="100" step="1" value="70" /></label>
+            <label class="sound-row">Ambient<input type="range" id="soundAmbient" min="0" max="100" step="1" value="30" /></label>
+            <p class="sound-hint">Voice regelt nur Feedback-Töne, nicht die Sprachübertragung.</p>
+          </div>
         </div>
         <p id="profileMsg" class="profile-msg"></p>
       </div>
@@ -102,6 +112,7 @@
           <div class="world-head">
             <h2>Welt</h2>
             <span id="worldStatus">WASD / Pfeiltasten zum Laufen.</span>
+            <button id="worldBackBtn" class="world-back-btn" type="button">Zurück -&gt;</button>
           </div>
           <div id="worldWrap">
             <canvas id="worldCanvas" width="960" height="600"></canvas>

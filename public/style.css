@@ -130,12 +130,6 @@ body::before {
 .city-actions button, #computerBody button { width: auto; margin: 0; padding: 8px 14px; font-size: 0.82rem; }
 #computerBody { display: flex; flex-direction: column; gap: 8px; }
 #computerBody p { font-size: 0.9rem; color: var(--muted); }
-@keyframes coinFlash {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.25); box-shadow: 0 0 18px rgba(255, 209, 102, 0.8); }
-  100% { transform: scale(1); }
-}
-.coin-flash { animation: coinFlash 0.6s ease; border-color: #ffd166 !important; }
 .profile-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
 .profile-head h2 { margin: 0; }
 #profileAvatarBig { font-size: 2.4rem; line-height: 1; }
@@ -163,6 +157,13 @@ body::before {
 }
 .modal-content textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(121, 220, 232, 0.2); }
 .profile-msg { min-height: 1.2em; font-size: 0.82rem; color: var(--cyan); text-align: center; margin-top: 8px; }
+/* Sound-Einstellungen (Profil, nur eigenes Profil) */
+.sound-settings { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; min-width: 0; }
+.sound-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; font-size: 0.85rem; color: var(--muted); }
+.sound-row input[type="range"] { flex: 1; min-width: 0; height: 44px; accent-color: var(--cyan); }
+.sound-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--cyan); flex-shrink: 0; }
+.sound-toggle { color: #fff; font-weight: 700; }
+.sound-hint { font-size: 0.75rem; color: var(--faint); margin-top: 2px; }
 /* Profil in Chat + Lobby */
 .msg-avatar { margin-right: 2px; }
 .msg-username, .user-entry { cursor: pointer; }
@@ -279,6 +280,8 @@ button { font-family: var(--font-body); }
 }
 #sendBtn:hover,
 .modal-content button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+/* Login-Loading: Button deaktiviert + Wartestatus (Design sonst unverändert) */
+#loginBtn.loading { opacity: 0.65; cursor: wait; transform: none; }
 
 /* ===== Haupt-Chat-Container (glass card) ===== */
 #chatContainer {
@@ -794,8 +797,6 @@ button { font-family: var(--font-body); }
   .chat-title { font-size: 1rem; }
   /* Handy: Chat/Welt-Umschalter komplett ausblenden */
   .view-switch { display: none !important; }
-  /* Handy: Währung hat keinen Nutzen → Button ausblenden */
-  #coinPill { display: none !important; }
   .modal-content { width: 90vw; padding: 22px 16px; }
   .modal-content h2 { font-size: 1.4rem; }
   #chatContainer {
@@ -852,6 +853,29 @@ button { font-family: var(--font-body); }
 /* Chat-Fenster: Chat + alte Lobby (Voice versteckt). Welt-Fenster: Welt + Voice (ohne Sidebar). */
 #chatContainer:not(.view-voice) > .voice-panel { display: none; }
 #chatContainer.view-voice > .sidebar { display: none; }
+/* Desktop: Voice-Panel rechts AN das Originallayout anhängen (kein Schrumpfen des Chats).
+   Der Container wächst mit (1120 + 292 Voice = 1412), Chat behält auf breiten
+   Screens seine Originalbreite. Nur Darstellung – Voice-Logik unverändert.
+   Mobile (<=900px) bleibt unberührt. */
+@media (min-width: 901px) {
+  #chatContainer:not(.view-voice) { width: min(1412px, calc(100% - 48px)); max-width: 1412px; }
+  #chatContainer:not(.view-voice) > .voice-panel { display: block; }
+}
+/* Zurück-Button in der Welt (führt zur Voice-/Lobby-Ansicht, trennt kein Voice) */
+.world-back-btn {
+  margin-left: auto;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.world-back-btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-1px); }
 
 /* ===== Chat/Lobby-Umschalter ===== */
 .view-switch {

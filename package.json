@@ -4,9 +4,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "dev:start": "systemctl --user start cucuri-dev.service",
+    "dev:stop": "systemctl --user stop cucuri-dev.service",
+    "dev:restart": "systemctl --user restart cucuri-dev.service",
+    "dev:status": "systemctl --user status cucuri-dev.service --no-pager",
+    "dev:logs": "journalctl --user -u cucuri-dev.service -n 50 --no-pager"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "mongoose": "^8.24.1",

@@ -3,8 +3,95 @@ require("dotenv").config();
 const express = require("express");
 const http = require("http");
 const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 const socketIo = require("socket.io");
 const mongoose = require("mongoose");
+
+// Passwort-Hashing: bcrypt, cost factor 12. isBcryptHash() erkennt,
+// ob ein gespeicherter Wert bereits ein Hash ist (für Lazy-Migration).
+const BCRYPT_ROUNDS = 12;
+function isBcryptHash(value) {
+  return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
+}
+
+// ===== Username-Security (Security-Grenze: Server) =====
+// 3-20 Zeichen aus expliziter Whitelist (kein HTML, keine Spaces/Controls).
+const USERNAME_RE = /^[A-Za-z0-9_äöüÄÖÜß-]{3,20}$/;
+// Case-insensitive reserviert: tatsächlich verwendete System-/Admin-Namen
+// (Divo = Admin überall, System = System-Nachrichten) + klassische
+// Impersonation-Ziele. Keine riesige Liste, nur relevante Namen.
+const RESERVED_USERNAMES = new Set([
+  "divo", "admin", "administrator", "system", "moderator", "support", "server", "bot",
+]);
+function isValidUsernameFormat(name) {
+  return typeof name === "string" && USERNAME_RE.test(name);
+}
+function isReservedUsername(name) {
+  return typeof name === "string" && RESERVED_USERNAMES.has(name.toLowerCase());
+}
+
+// ===== Rate Limits (In-Memory, Single-Instance) =====
+// HINWEIS: Bei mehreren Server-Instanzen (z. B. mehrere Render-Services)
+// gilt dieses Limit nur pro Instanz, nicht global. Dann Redis o.ä. nötig.
+const MAX_LOGIN_FAILS = 10;
+const LOGIN_COOLDOWN_MS = 15 * 60 * 1000;
+const MAX_REGISTER_PER_HOUR = 10;
+const REGISTER_WINDOW_MS = 60 * 60 * 1000;
+const RATE_MAP_MAX = 5000; // Deckel gegen Memory-Wachstum
+const loginFails = new Map(); // "ip|user" -> { count, until }
+const registerHits = new Map(); // ip -> [timestamps]
+function clientIp(socket) {
+  return (socket && socket.handshake && socket.handshake.address) || "unknown";
+}
+// Abgelaufene Einträge + Überlauf entsorgen (kein Memory Leak).
+function sweepRateMaps() {
+  const now = Date.now();
+  for (const [k, v] of loginFails) {
+    // Nur abgelaufene Cooldowns löschen — Zähler ohne Cooldown (until=0)
+    // müssen erhalten bleiben, sonst erreicht niemand je das Limit.
+    if (v.until !== 0 && v.until <= now) loginFails.delete(k);
+  }
+  for (const [k, arr] of registerHits) {
+    const fresh = arr.filter((t) => now - t < REGISTER_WINDOW_MS);
+    if (fresh.length) registerHits.set(k, fresh);
+    else registerHits.delete(k);
+  }
+  for (const m of [loginFails, registerHits]) {
+    let guard = 0;
+    while (m.size > RATE_MAP_MAX && guard++ < RATE_MAP_MAX) {
+      m.delete(m.keys().next().value); // älteste zuerst (Insertion-Order)
+    }
+  }
+}
+function loginRateKey(ip, username) {
+  const u = typeof username === "string" ? username.toLowerCase().slice(0, 32) : "?";
+  return `${ip}|${u}`;
+}
+function isLoginBlocked(ip, username) {
+  sweepRateMaps();
+  const e = loginFails.get(loginRateKey(ip, username));
+  return !!e && e.until > Date.now();
+}
+function recordLoginFail(ip, username) {
+  sweepRateMaps();
+  const k = loginRateKey(ip, username);
+  const e = loginFails.get(k) || { count: 0, until: 0 };
+  e.count += 1;
+  if (e.count >= MAX_LOGIN_FAILS) e.until = Date.now() + LOGIN_COOLDOWN_MS;
+  loginFails.set(k, e);
+}
+function resetLoginFails(ip, username) {
+  loginFails.delete(loginRateKey(ip, username));
+}
+function registerAllowed(ip) {
+  sweepRateMaps();
+  const now = Date.now();
+  const arr = (registerHits.get(ip) || []).filter((t) => now - t < REGISTER_WINDOW_MS);
+  if (arr.length >= MAX_REGISTER_PER_HOUR) return false;
+  arr.push(now);
+  registerHits.set(ip, arr);
+  return true;
+}
 
 const PUBLIC_WORLD_ENABLED = false; // Production: nur Admin Divo sieht die Welt
 function isAdminUser(username) { return username === "Divo"; }
@@ -50,6 +137,7 @@ if (!MONGO_URI) {
     .then(async () => {
       console.log("✅ Erfolgreich mit MongoDB verbunden!");
       await initDefaultVoiceRooms();
+      await refreshCityStatusCache();
     })
     .catch((err) => {
       console.error("❌ MongoDB Verbindungsfehler:", err.message);
@@ -352,12 +440,9 @@ setInterval(() => {
   }
 }, 100);
 setInterval(() => {
-  // Filter café NPC wenn Café nicht fertig
-  CityState.findOne({ projectId: "cafe" }).lean().then((doc) => {
-    const showCafe = doc && doc.status === "completed";
-    const filtered = NPCS_SERVER.filter((n) => n.id !== "npc_cafe" || showCafe);
-    io.emit("npcUpdate", filtered);
-  }).catch(() => io.emit("npcUpdate", NPCS_SERVER.filter((n) => n.id !== "npc_cafe")));
+  // Filter café NPC wenn Café nicht fertig (Status aus RAM-Cache, kein DB-Read)
+  const showCafe = cityStatusCache.get("cafe") === "completed";
+  io.emit("npcUpdate", NPCS_SERVER.filter((n) => n.id !== "npc_cafe" || showCafe));
 }, 400);
 
 // ===== Anti-Spam: 8x gleiche Nachricht -> 2 Min. Chat- + Voice-Sperre =====
@@ -439,6 +524,21 @@ async function initDefaultVoiceRooms() {
   }
 }
 
+// City-Status im RAM (für NPC-Tick): projectId -> "open"|"completed".
+// Der 400-ms-Tick liest NUR diesen Cache (0 DB-Reads). Befüllt beim Start
+// und bei jedem Status-Wechsel (cityContribute). Single-Thread: synchrone
+// Map-Updates direkt nach awaited DB-Writes sind race-frei gegenüber dem Tick.
+const cityStatusCache = new Map();
+async function refreshCityStatusCache() {
+  try {
+    const states = await CityState.find({}, "projectId status").lean();
+    states.forEach((s) => cityStatusCache.set(s.projectId, s.status || "open"));
+  } catch (err) {
+    console.error("City-Cache Fehler:", err.message);
+    // Cache bleibt wie er ist; Tick nutzt Fallback (Café-NPC versteckt).
+  }
+}
+
 async function voiceMembers(roomId) {
   const memberIds = Array.from(voiceRoomsUsers.get(roomId) || []);
   const names = memberIds.map(
@@ -497,14 +597,19 @@ function leaveVoiceRoom(socket) {
 
 const JUGENDWORT_WORDS = require("./public/Jugendwort/jw-data.json");
 
-app.use((req, res, next) => {
-  req.currentUsername = req.query.user || null;
-  next();
-});
+// Jugendwort-Identität kommt AUSSCHLIESSLICH aus dem Session-Token
+// (Header "x-auth-token" oder Body.authToken, gleiche Tokens wie loginWithToken).
+// Der ?user=-Parameter wird ignoriert und darf NIEMALS als Identität dienen.
+async function jugendwortIdentity(req) {
+  const token = req.headers["x-auth-token"] || (req.body && req.body.authToken);
+  if (typeof token !== "string" || !token) return null;
+  const u = await User.findOne({ authToken: token }, "username").lean();
+  return u ? u.username : null;
+}
 
 app.get("/api/jugendwort/votes", async (req, res) => {
   try {
-    const currentUsername = req.currentUsername;
+    const currentUsername = await jugendwortIdentity(req);
     const users = await User.find(
       { jugendwortChoice: { $ne: null } },
       "jugendwortChoice username",
@@ -537,7 +642,7 @@ app.get("/api/jugendwort/votes", async (req, res) => {
 
 app.post("/api/jugendwort/vote", async (req, res) => {
   try {
-    const currentUsername = req.currentUsername;
+    const currentUsername = await jugendwortIdentity(req);
     if (!currentUsername)
       return res.status(401).json({ error: "Nicht eingeloggt." });
 
@@ -563,7 +668,7 @@ app.post("/api/jugendwort/vote", async (req, res) => {
 
 app.delete("/api/jugendwort/vote", async (req, res) => {
   try {
-    const currentUsername = req.currentUsername;
+    const currentUsername = await jugendwortIdentity(req);
     if (!currentUsername)
       return res.status(401).json({ error: "Nicht eingeloggt." });
 
@@ -582,7 +687,7 @@ app.delete("/api/jugendwort/vote", async (req, res) => {
 
 app.get("/api/jugendwort/admin", async (req, res) => {
   try {
-    if (req.currentUsername !== "Divo") {
+    if ((await jugendwortIdentity(req)) !== "Divo") {
       return res.status(403).json({ error: "Kein Admin." });
     }
 
@@ -621,57 +726,93 @@ io.on("connection", (socket) => {
     const { username, password } = data;
     if (!username || !password)
       return socket.emit("registerError", "Bitte alles ausfüllen.");
-    if (username.length < 3)
-      return socket.emit("registerError", "Min. 3 Zeichen.");
+    // Format-Regeln sind öffentlich → spezifische Meldung ist ok.
+    if (!isValidUsernameFormat(username))
+      return socket.emit(
+        "registerError",
+        "Username: 3–20 Zeichen (Buchstaben, Zahlen, _, -, äöüß).",
+      );
+    // Reserviert-Prüfung VOR dem Rate-Limit (billig, kein DB-Zugriff).
+    // Gleiche neutrale Antwort wie bei vergebenen Namen → kein Orakel.
+    if (isReservedUsername(username))
+      return socket.emit(
+        "registerError",
+        "Dieser Username ist leider nicht verfügbar.",
+      );
+    // Rate-Limit gegen Bot-Registrierungen (pro IP, pro Stunde).
+    if (!registerAllowed(clientIp(socket)))
+      return socket.emit(
+        "registerError",
+        "Zu viele Registrierungen. Bitte später erneut versuchen.",
+      );
 
     try {
-      const existingUser = await User.findOne({ username });
-      if (existingUser)
-        return socket.emit("registerError", "Username existiert bereits.");
+      // Vergebene Namen: dieselbe neutrale Antwort wie reservierte,
+      // damit keine Username-Existenz verraten wird.
+      if (await User.findOne({ username }))
+        return socket.emit(
+          "registerError",
+          "Dieser Username ist leider nicht verfügbar.",
+        );
 
-      const newUser = new User({ username, password });
+      const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+      const newUser = new User({ username, password: passwordHash });
       await newUser.save();
 
       socket.emit("registerSuccess");
       broadcastUserList();
     } catch (err) {
+      // Race: zwei gleichzeitige Registrierungen → Unique-Index schlägt zu.
+      // Gleiche neutrale Antwort, keine DB-Details, kein Stacktrace.
+      if (err && err.code === 11000)
+        return socket.emit(
+          "registerError",
+          "Dieser Username ist leider nicht verfügbar.",
+        );
       console.error("Register Fehler:", err.message);
-      socket.emit("registerError", "Datenbank-Fehler beim Registrieren.");
+      socket.emit("registerError", "Registrierung fehlgeschlagen.");
     }
   });
 
-  // Gemeinsamer Login-Abschluss (Passwort- und Token-Login)
+  // Gemeinsamer Login-Abschluss (Passwort- und Token-Login).
+  // loginSuccess geht SOFORT raus; alles danach darf einen bereits
+  // erfolgreichen Login niemals in einen loginError verwandeln
+  // (sonst würde ein später DB-Schluckauf den User fälschlich ausloggen).
   async function completeLogin(username, token) {
     sessions.set(socket.id, username);
 
     socket.emit("loginSuccess", { username, token });
     emitEconomy(socket, username);
 
-    const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
-    const histNames = [...new Set(chatHistory.map((m) => m.username))];
-    let bannedSet = new Set();
     try {
-      const bannedDocs = await User.find(
-        { username: { $in: histNames }, isBanned: true },
-        "username",
-      ).lean();
-      bannedDocs.forEach((u) => bannedSet.add(u.username));
-    } catch (err) {
-      console.error("Fehler beim Bann-Check (Verlauf):", err.message);
-    }
-    socket.emit(
-      "loadHistory",
-      chatHistory.reverse().map((m) => ({
-        ...m.toObject(),
-        isAdmin: m.username === "Divo",
-        senderBanned:
-          bannedSet.has(m.username) ||
-          (tempBans.get(m.username) || 0) > Date.now(),
-      })),
-    );
+      const chatHistory = await Message.find().sort({ _id: -1 }).limit(100);
+      const histNames = [...new Set(chatHistory.map((m) => m.username))];
+      let bannedSet = new Set();
+      try {
+        const bannedDocs = await User.find(
+          { username: { $in: histNames }, isBanned: true },
+          "username",
+        ).lean();
+        bannedDocs.forEach((u) => bannedSet.add(u.username));
+      } catch (err) {
+        console.error("Fehler beim Bann-Check (Verlauf):", err.message);
+      }
+      socket.emit(
+        "loadHistory",
+        chatHistory.reverse().map((m) => ({
+          ...m.toObject(),
+          isAdmin: m.username === "Divo",
+          senderBanned:
+            bannedSet.has(m.username) ||
+            (tempBans.get(m.username) || 0) > Date.now(),
+        })),
+      );
 
-    socket.broadcast.emit("userJoined", username);
-    broadcastUserList();
+      socket.broadcast.emit("userJoined", username);
+      broadcastUserList();
+    } catch (err) {
+      console.error("Login-Folgefehler (Login bleibt gültig):", err.message);
+    }
   }
 
   // ===== LOGIN =====
@@ -684,20 +825,58 @@ io.on("connection", (socket) => {
     }
 
     const { username, password } = data;
+    if (typeof password !== "string" || !password)
+      return socket.emit(
+        "loginError",
+        "Falsche Daten oder Account existiert nicht!",
+      );
+    // Rate-Limit VOR bcrypt.compare (CPU-Schutz): 10 Fehlversuche pro
+    // IP+Username → 15 Min Cooldown. Erfolgreicher Login setzt zurück.
+    const loginIp = clientIp(socket);
+    if (isLoginBlocked(loginIp, username))
+      return socket.emit(
+        "loginError",
+        "Zu viele Versuche. Bitte in 15 Minuten erneut versuchen.",
+      );
     try {
-      const user = await User.findOne({ username, password });
-      if (!user)
+      // Nur benötigte Felder laden (kleineres Payload als Voll-Dokument).
+      const user = await User.findOne({ username }, "password isBanned");
+      if (!user) {
+        recordLoginFail(loginIp, username);
         return socket.emit(
           "loginError",
           "Falsche Daten oder Account existiert nicht!",
         );
+      }
+      let passwordOk = false;
+      if (isBcryptHash(user.password)) {
+        passwordOk = await bcrypt.compare(password, user.password);
+      } else {
+        // Lazy-Migration: alter Klartext-Account. Nur bei korrektem
+        // Passwort auf bcrypt-Hash upgraden, sonst nichts ändern.
+        if (password === user.password) {
+          passwordOk = true;
+          await User.updateOne(
+            { username },
+            { $set: { password: await bcrypt.hash(password, BCRYPT_ROUNDS) } },
+          );
+        }
+      }
+      if (!passwordOk) {
+        recordLoginFail(loginIp, username);
+        return socket.emit(
+          "loginError",
+          "Falsche Daten oder Account existiert nicht!",
+        );
+      }
+      resetLoginFails(loginIp, username);
       if (user.isBanned)
         return socket.emit("loginError", "Du wurdest gebannt.");
 
-      user.authToken = crypto.randomBytes(32).toString("hex");
-      await user.save();
+      const authToken = crypto.randomBytes(32).toString("hex");
+      await User.updateOne({ username }, { $set: { authToken } });
 
-      await completeLogin(username, user.authToken);
+      await completeLogin(username, authToken);
     } catch (err) {
       console.error("Login Fehler:", err.message);
       socket.emit("loginError", "Datenbank-Fehler beim Login.");
@@ -948,6 +1127,7 @@ io.on("connection", (socket) => {
       await emitEconomy(socket, username);
       if (updated && updated.total >= project.cost && updated.status !== "completed") {
         await CityState.updateOne({ projectId }, { $set: { status: "completed" } });
+        cityStatusCache.set(projectId, "completed");
         io.emit("buildingUpdate", { building: { id: project.id, ...BUILDINGS[project.id] } });
       }
       await broadcastCity();
