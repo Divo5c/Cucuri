@@ -32,7 +32,7 @@
 - Public sieht `Coming Soon` (statt 2400×1800 World), Voice bleibt voll funktional.
 
 ## Render Schritte (manuell, 2 Min)
-1. GitHub Repo verbinden → Branch `main`
+1. GitHub Repo verbinden → Branch `production`
 2. `render.yaml` wird automatisch erkannt (oder manuell Servicetyp `Web Service` → `Node`)
 3. Env Vars oben setzen
 4. Deploy → `https://<service>.onrender.com` → Login → Voice → Coming Soon testen
