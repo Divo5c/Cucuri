@@ -412,8 +412,8 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: "village_road", name: "Dorfstraße", x: 400, y: 700, w: 1600, h: 60, zone: "village", floor: 0, floorColor: "rgba(120,110,90,.06)" },
       { id: "post", name: "Post", x: 500, y: 520, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(200,180,120,.08)" },
       { id: "shop", name: "Shop", x: 1760, y: 520, w: 140, h: 100, zone: "village", floor: 0, floorColor: "rgba(140,180,160,.08)" },
-      { id: "park", name: "Park", x: 500, y: 780, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(120,170,120,.08)" },
-      { id: "cafe", name: "Café", x: 1660, y: 780, w: 200, h: 140, zone: "village", floor: 0, floorColor: "rgba(180,140,120,.08)" },
+      { id: "park", name: "Park", x: 500, y: 780, w: 200, h: 120, zone: "village", floor: 0, floorColor: "rgba(120,170,120,.08)" },
+      { id: "cafe", name: "Café", x: 1660, y: 780, w: 200, h: 120, zone: "village", floor: 0, floorColor: "rgba(180,140,120,.08)" },
       { id: "rathaus", name: "Rathaus", x: 1060, y: 380, w: 280, h: 100, zone: "village", floor: 0, floorColor: "rgba(150,140,180,.08)" },
       { id: "village_house_01", name: "Haus 1", x: 600, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
       { id: "village_house_02", name: "Haus 2", x: 1800, y: 900, w: 120, h: 80, zone: "village", floor: 0, floorColor: "rgba(180,160,140,.06)" },
@@ -504,9 +504,6 @@ document.addEventListener("DOMContentLoaded", () => {
       { id: "p1", x: 600, y: 850, room: "park", zone: "village", floor: 0 },
     ],
     spawn: { x: 1200, y: 1820, zone: "villa", floor: 0, room: "entrance" },
-    villaExit: { x: 920, y: 1880, w: 50, h: 20, fromZone: "villa", toZone: "village", toPos: { x: 1200, y: 1100, zone: "village", floor: 0 } },
-    villageEntry: { x: 1200, y: 1100, w: 50, h: 20, fromZone: "village", toZone: "villa", toPos: { x: 920, y: 1860, zone: "villa", floor: 0 } },
-    exit: { x: 920, y: 1880, w: 50, h: 20 },
   };
   const ROOM_NAMES = { lounge: "Flur", kitchen: "Küche", living: "Wohnzimmer", living_room: "Wohnzimmer", gaming: "Gaming-Zimmer", chill: "Chill-Ecke", toilet: "Toilette", bedroom: "Schlafzimmer", bedroom2: "Gästezimmer", bathroom: "Badezimmer", office: "Arbeitszimmer", dining: "Esszimmer", storage: "Abstellraum", hallway: "Flur", hallway_up: "Flur OG", balcony: "Balkon", village_center: "Marktplatz", village_road: "Dorfstraße", cafe: "Café", shop: "Shop", post: "Post", park: "Park", rathaus: "Rathaus" };
   const PLAYER_R = 14;
@@ -604,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
     park: { x: 600, y: 850, zone: "village", floor: 0 },
     rathaus: { x: 1200, y: 430, zone: "village", floor: 0 },
     village_center: { x: 1200, y: 700, zone: "village", floor: 0 },
-    villa_gate: { x: 1200, y: 1100, zone: "village", floor: 0 },
+    villa_gate: { x: 1200, y: 1080, zone: "village", floor: 0 },
     street_north: { x: 1200, y: 400, zone: "village", floor: 0 },
     street_south: { x: 1200, y: 900, zone: "village", floor: 0 },
     house_01_front: { x: 660, y: 980, zone: "village", floor: 0 },
@@ -727,18 +724,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== Interactables: datengetrieben {id, Typ, Position, Radius, Raum/Zone} =====
   const INTERACTABLES = [
     // Villa EG
-    { id: "villa_exit", type: "zone", x: 920, y: 1880, range: 45, room: "entrance", zone: "villa", floor: 0, toZone: "village", toPos: { x: 1200, y: 1100, zone: "village", floor: 0 } },
-    { id: "village_entry", type: "zone", x: 1200, y: 1100, range: 45, room: "village_center", zone: "village", floor: 0, toZone: "villa", toPos: { x: 920, y: 1860, zone: "villa", floor: 0 } },
+    { id: "villa_exit", type: "zone", x: 920, y: 1880, range: 45, room: "entrance", zone: "villa", floor: 0, toZone: "village", toPos: { x: 1200, y: 1080, zone: "village", floor: 0 } },
+    { id: "village_entry", type: "zone", x: 1200, y: 1080, range: 45, room: "village_center", zone: "village", floor: 0, toZone: "villa", toPos: { x: 920, y: 1860, zone: "villa", floor: 0 } },
     { id: "house_01_front", type: "door", x: 660, y: 980, range: 40, room: "house_01_entry", zone: "village", floor: 0, doorId: "house_01_front" },
     { id: "house_02_front", type: "door", x: 1860, y: 980, range: 40, room: "house_02_entry", zone: "village", floor: 0, doorId: "house_02_front" },
-    { id: "stairs_up", type: "stairs", x: 510, y: 360, range: 45, room: "lounge", zone: "villa", floor: 0, toFloor: 1, toPos: { x: 510, y: 360, zone: "villa", floor: 1 } },
-    { id: "stairs_down", type: "stairs", x: 510, y: 360, range: 45, room: "hallway_up", zone: "villa", floor: 1, toFloor: 0, toPos: { x: 510, y: 360, zone: "villa", floor: 0 } },
-    { id: "fridge", type: "shop", shopId: "fridge", x: 272, y: 150, range: 55, room: "kitchen", zone: "villa", floor: 0 },
-    { id: "drop_kitchen", type: "dropoff", spotId: "drop_kitchen", x: 140, y: 112, range: 55, room: "kitchen", zone: "villa", floor: 0 },
-    { id: "drop_chill", type: "dropoff", spotId: "drop_chill", x: 150, y: 250, range: 55, room: "chill", zone: "villa", floor: 0 },
-    { id: "comp_g1", type: "hub", x: 695, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
-    { id: "comp_g2", type: "hub", x: 780, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
-    { id: "comp_g3", type: "hub", x: 865, y: 140, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    { id: "stairs_up", type: "stairs", x: 1280, y: 1740, range: 45, room: "lounge", zone: "villa", floor: 0, toFloor: 1, toPos: { x: 1280, y: 1436, zone: "villa", floor: 1 } },
+    { id: "stairs_down", type: "stairs", x: 1280, y: 1436, range: 45, room: "hallway_up", zone: "villa", floor: 1, toFloor: 0, toPos: { x: 1280, y: 1740, zone: "villa", floor: 0 } },
+    { id: "fridge", type: "shop", shopId: "fridge", x: 950, y: 1470, range: 55, room: "kitchen", zone: "villa", floor: 0 },
+    { id: "comp_g1", type: "hub", x: 1500, y: 1500, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    { id: "comp_g2", type: "hub", x: 1590, y: 1500, range: 48, room: "gaming", zone: "villa", floor: 0 },
+    { id: "comp_g3", type: "hub", x: 1680, y: 1500, range: 48, room: "gaming", zone: "villa", floor: 0 },
     // Dorf — Jobs & Shops nur hier
     { id: "post_terminal", type: "job", x: 570, y: 570, range: 55, room: "post", zone: "village", floor: 0 },
     { id: "shop_market", type: "shop", shopId: "market", x: 1830, y: 570, range: 60, room: "shop", zone: "village", floor: 0 },
@@ -797,6 +792,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const label = it ? interactLabel(it) : "";
     if (el.textContent !== label) el.textContent = label;
     el.classList.toggle("hidden", !label);
+    const tb = $("interactBtn");
+    if (tb) {
+      const show = worldActive && isTouchDevice() && !!it;
+      tb.classList.toggle("on", show);
+      if (show) {
+        const tlabel = label.replace(/^\[E\]\s*/, "");
+        if (tb.textContent !== tlabel) tb.textContent = tlabel;
+      }
+    }
   }
   function standUp(silent) {
     if (!worldPlayer.sitting && !worldPlayer.seatId) return;
@@ -1024,6 +1028,42 @@ document.addEventListener("DOMContentLoaded", () => {
   initSoundSettings();
   // ===== Input: WASD + Pfeile (kein Click-to-Move). Tippen blockiert nie. =====
   const worldKeys = { up: false, down: false, left: false, right: false };
+  // Touch-Joystick schreibt hierher (statt Tastatur-Flags); worldApplyInput nutzt beides.
+  const worldTouch = { x: 0, y: 0, mag: 0 };
+  let joyPointerId = null;
+  const JOY_R = 44;
+  const isTouchDevice = () => (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) || (typeof window !== "undefined" && "ontouchstart" in window);
+  function joyReset() {
+    worldTouch.x = worldTouch.y = worldTouch.mag = 0;
+    joyPointerId = null;
+    const knob = $("joyKnob");
+    if (knob) knob.style.transform = "translate(-50%,-50%)";
+  }
+  function joyUpdate(e) {
+    const zone = $("joyZone");
+    if (!zone || typeof e.clientX !== "number") return;
+    const r = zone.getBoundingClientRect();
+    const v = worldTouchFromDelta(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2), JOY_R);
+    worldTouch.x = v.x; worldTouch.y = v.y; worldTouch.mag = v.mag;
+    const knob = $("joyKnob");
+    if (knob) knob.style.transform = `translate(calc(-50% + ${v.x * v.mag * JOY_R}px), calc(-50% + ${v.y * v.mag * JOY_R}px))`;
+  }
+  function bindJoystick() {
+    if (bindJoystick._done) return; bindJoystick._done = true;
+    const zone = $("joyZone");
+    if (!zone) return;
+    zone.addEventListener("pointerdown", (e) => {
+      if (joyPointerId !== null) return;
+      joyPointerId = e.pointerId;
+      try { zone.setPointerCapture(e.pointerId); } catch {}
+      joyUpdate(e);
+    });
+    zone.addEventListener("pointermove", (e) => { if (e.pointerId !== joyPointerId) return; joyUpdate(e); });
+    const end = (e) => { if (e.pointerId !== joyPointerId) return; joyReset(); };
+    zone.addEventListener("pointerup", end);
+    zone.addEventListener("pointercancel", end);
+    $("interactBtn")?.addEventListener("click", () => { doInteract(); });
+  }
   // Schritt-Distanz (tatsächlich zurückgelegte Pixel, daher kollisions-sicher)
   let stepAcc = 0, stepLX = 0, stepLY = 0, stepInit = false;
   const STEP_PX = 45; // ~260ms bei 175px/s
@@ -1039,7 +1079,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function worldTypingTarget(t) {
     return Boolean(t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable));
   }
-  function worldClearKeys() { worldKeys.up = worldKeys.down = worldKeys.left = worldKeys.right = false; }
+  function worldClearKeys() { worldKeys.up = worldKeys.down = worldKeys.left = worldKeys.right = false; joyReset(); }
   document.addEventListener("keydown", (event) => {
     const k = WORLD_KEYMAP[event.code];
     if (!k || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -1059,16 +1099,30 @@ document.addEventListener("DOMContentLoaded", () => {
     worldPlayer.x = Math.max(PLAYER_R, Math.min(WORLD.w - PLAYER_R, worldPlayer.x));
     worldPlayer.y = Math.max(PLAYER_R, Math.min(WORLD.h - PLAYER_R, worldPlayer.y));
   }
+  /* WORLD-VECTOR-START (rein, testbar: Tastatur + Touch -> ein Vektor) */
+  function worldMoveVector(kb, touch) {
+    let dx = (kb.right ? 1 : 0) - (kb.left ? 1 : 0);
+    let dy = (kb.down ? 1 : 0) - (kb.up ? 1 : 0);
+    let mag = 1;
+    if (!dx && !dy && (touch.x || touch.y)) { dx = touch.x; dy = touch.y; mag = touch.mag || 1; }
+    if (!dx && !dy) return null;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: dx / len, y: dy / len, mag };
+  }
+  function worldTouchFromDelta(dx, dy, radius) {
+    const dist = Math.hypot(dx, dy);
+    if (!dist || dist < radius * 0.25) return { x: 0, y: 0, mag: 0 }; // Deadzone
+    const mag = Math.min(1, dist / radius);
+    return { x: dx / dist, y: dy / dist, mag };
+  }
+  /* WORLD-VECTOR-END */
   function worldApplyInput(dt) {
     if (worldPlayer.sitting) return false; // Sitzen blockiert Bewegung — E zum Aufstehen
-    let dx = (worldKeys.right ? 1 : 0) - (worldKeys.left ? 1 : 0);
-    let dy = (worldKeys.down ? 1 : 0) - (worldKeys.up ? 1 : 0);
-    if (!dx && !dy) return false;
-    const len = Math.hypot(dx, dy);
-    dx /= len; dy /= len;
+    const v = worldMoveVector(worldKeys, worldTouch);
+    if (!v) return false;
     worldJoinFresh = false;
-    const sp = 175 * dt;
-    worldTryMove(dx * sp, dy * sp);
+    const sp = 175 * dt * v.mag;
+    worldTryMove(v.x * sp, v.y * sp);
     return true;
   }
   function worldSeatFree(seat) {
@@ -1781,6 +1835,9 @@ document.addEventListener("DOMContentLoaded", () => {
     socket.emit("getEconomy");
     worldEmitMove(true);
     worldLoop._t = 0;
+    bindJoystick();
+    joyReset();
+    if (isTouchDevice()) $("joyZone")?.classList.add("on");
     worldRAF = requestAnimationFrame(worldLoop);
   }
   function worldStop() {
@@ -1788,6 +1845,8 @@ document.addEventListener("DOMContentLoaded", () => {
     worldActive = false;
     cancelAnimationFrame(worldRAF);
     worldClearKeys();
+    $("joyZone")?.classList.remove("on");
+    $("interactBtn")?.classList.remove("on");
     worldClearBubbles();
     socket.emit("worldLeave");
     worldPeerCloseAll();

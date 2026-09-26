@@ -371,9 +371,9 @@ const worldUsers = new Map(); // socket.id -> {username,x,y,room,zone,floor,seat
 const WORLD_ZONES = ["villa", "village"];
 const WORLD_FLOORS = { villa: [0, 1], village: [0] };
 const WORLD_ROOMS = [
-  "lounge", "kitchen", "living_room", "living", "gaming", "chill",
-  "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway", "hallway_up", "balcony", "entrance",
-  "village_center", "village_road", "cafe", "shop", "post", "park", "rathaus", "village_house_01", "village_house_02", "village_house_03", "village_house_04", "village_house_05", "village_house_06", "village_residential",
+  "lounge", "kitchen", "living_room", "gaming", "chill",
+  "toilet", "bedroom", "bedroom2", "bathroom", "office", "dining", "storage", "hallway_up", "balcony", "entrance",
+  "village_center", "village_road", "cafe", "shop", "post", "park", "rathaus", "village_house_01", "village_house_02", "village_house_03", "village_residential",
   "house_01_entry", "house_01_living", "house_01_kitchen", "house_01_bath", "house_01_bedroom", "house_02_entry", "house_02_living", "house_02_kitchen", "house_02_bath", "house_02_guest"
 ];
 // NPC Server Authority — 4 NPCs, waypoints, state machine
@@ -385,7 +385,7 @@ const NPCS_SERVER = [
 ];
 const VILLAGE_WAYPOINTS_SERVER = {
   post: { x: 570, y: 570 }, shop: { x: 1830, y: 570 }, cafe: { x: 1760, y: 850 }, park: { x: 600, y: 850 },
-  rathaus: { x: 1200, y: 430 }, village_center: { x: 1200, y: 700 }, villa_gate: { x: 1200, y: 1100 },
+  rathaus: { x: 1200, y: 430 }, village_center: { x: 1200, y: 700 }, villa_gate: { x: 1200, y: 1080 },
 };
 let doorStates = new Map(); // doorId -> "open"/"closed" (default closed for house doors, open for interior)
 // House doors default closed, interior doors open

@@ -111,6 +111,55 @@ body::before {
   font-size: 0.85rem;
   color: #fff;
 }
+/* Touch-Joystick + Interact-Button (nur mobil, nur in der Welt sichtbar) */
+.joy-zone {
+  position: fixed;
+  left: 14px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  width: 124px; height: 124px;
+  border-radius: 50%;
+  background: rgba(9, 21, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--shadow-lg);
+  z-index: 600;
+  touch-action: none;
+  display: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.joy-zone.on { display: block; }
+.joy-knob {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 54px; height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff 0%, #d8ecfe 30%, #dceefe 75%, #ffffff 100%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.interact-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  min-width: 72px; min-height: 56px;
+  max-width: 46vw;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #d8ecfe 30%, #dceefe 75%, #ffffff 100%);
+  color: var(--btn-ink);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  z-index: 600;
+  display: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.interact-btn.on { display: block; }
 /* Wallet / Shop / City */
 .wallet-row, .shop-row {
   display: flex;
